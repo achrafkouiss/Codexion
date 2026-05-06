@@ -121,8 +121,14 @@ typedef struct s_thread
     pthread_t id;
     int index;
 } t_thread;
-    pthread_mutex_t lock;
 
+pthread_mutex_t lock;
+
+typedef struct s_lock
+{
+    pthread_mutex_t lock;
+    int id;
+} t_lock;
 
 void *free_threads(t_thread *threads, int size)
 {
