@@ -6,85 +6,100 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/01 16:38:15 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/12 15:57:22 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-void *free_dongles(t_dongle **dongles, long size)
+void *free_dongles(t_dongle *dongles, size_t size)
 {
-	int i;
+	size_t i;
 
 	i = 0;
 	while (i < size)
 	{
-		free(dongles[i]->request);
-		free(dongles[i++]);
+		free(dongles[i].request->arr);
+		free(dongles[i].request);
+		i++;
 	}
 	free(dongles);
 	dongles = NULL;
 	return (NULL);
 }
 
-void *free_coders(t_coder **coders, t_dongle **dongles, long len, long size)
+void *free_coders(t_coder *coders, t_dongle *dongles, size_t size)
 {
-	int i;
-
-	i = 0;
-	while (i < len)
-		free(coders[i++]);
+	// printf("xxxxxxxxxxxxxxxxxx\n");
 	free(coders);
 	coders = NULL;
 	return (free_dongles(dongles, size));
 }
 
-
-t_dongle **init_dongle(long size)
+t_heap *init_heap(t_dongle *dongles, size_t capacity, size_t size)
 {
-	int i;
-	t_dongle **dongles;
+	t_coder *coder;
+	t_heap *heap;
+
+	heap = malloc(sizeof(t_heap));
+	if (!heap)
+		return (free_dongles(dongles, size));
+	heap->arr = malloc(sizeof(t_coder) * 2);
+	if (!heap->arr)
+		return (free_dongles(dongles, size));
+	heap->capacity = capacity;
+	heap->size = 0;
+	return (heap);
+}
+
+t_dongle *init_dongle(size_t capacity)
+{
+	size_t i;
+	t_dongle *dongles;
 
 	i = 0;
-	dongles = malloc(size * sizeof(t_dongle));
-	while (i < size)
+	dongles = malloc(capacity * sizeof(t_dongle));
+	if (!dongles)
+		return free_dongles(dongles, i);
+	while (i < capacity)
 	{
-		dongles[i] = malloc(sizeof(t_dongle));
-		if (!dongles[i])
-			return free_dongles(dongles, i);
-		dongles[i]->dongle_id = i;
-		dongles[i]->status = 1;
-		dongles[i]->last_compile_time = 0;
-		dongles[i]->request = NULL;
+		pthread_mutex_init(&dongles[i].lock, NULL);
+		dongles[i].dongle_id = i;
+		dongles[i].status = 0;
+		dongles[i].last_compile_time = 0;
+		dongles[i].request = init_heap(dongles, capacity, i);
 		i++;
 	}
 	return dongles;
 }
 
-t_coder **init_coders(t_dongle **dongles, long size)
+t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock)
 {
-	int i;
-	t_coder		**coders;
+	size_t i;
+	t_coder		*coders;
 
 	if (!dongles)
 		return (NULL);
 	i = 0;
-	coders = malloc(size * sizeof(t_coder));
-	while (i < size)
+	coders = malloc(capacity * sizeof(t_coder));
+	if (!coders)
+		return (free_coders(coders, dongles, capacity));
+	while (i < capacity)
 	{
-		coders[i] = malloc(sizeof(t_coder));
-		if (!coders[i])
-			return (free_coders(coders, dongles, i, size));
-		coders[i]->counter = 0;
-		coders[i]->last_compile_time = 0;
-		coders[i]->right_dongle = dongles[i];
-		if (size == 1)
-			coders[i]->left_dongle = NULL;
-		else if (i == size - 1)
-			coders[i]->left_dongle = dongles[0];
+		coders[i].counter = 0;
+		coders[i].last_compile_time = 0;
+		coders[i].priority = 0;
+		coders[i].id = i;
+		coders[i].right_dongle = &dongles[i];
+		coders[i].lock2 = lock;
+		if (capacity == 1)
+		coders[i].left_dongle = NULL;
+		else if (i == capacity - 1)
+		coders[i].left_dongle = &dongles[0];
 		else
-			coders[i]->left_dongle = dongles[i + 1];
+		coders[i].left_dongle = &dongles[i + 1];
 		i++;
+		// printf("xxxxxxxxxxxxxxxxxx\n");
 	}
 	return (coders);
 }
@@ -92,32 +107,38 @@ t_coder **init_coders(t_dongle **dongles, long size)
 int	codexion(int ac, char *av[])
 {
 	t_input		*inputs;
-	t_dongle	**dongles;
-	t_coder		**coders;
+	t_dongle	*dongles;
+	t_coder		*coders;
+	pthread_mutex_t lock;
 	// t_monitor	*monitor;
 
 	inputs = parsing(ac, av);
 	if (!inputs)
 		return (0);
+	// printf("size = %ld\n", inputs->number_of_coders);
 	dongles = init_dongle(inputs->number_of_coders);
-	coders = init_coders(dongles, inputs->number_of_coders);
+	coders = init_coders(dongles, inputs->number_of_coders, &lock);
 	if (!coders)
-		return  (free(inputs), 0);
-	for (int i = 0; i < inputs->number_of_coders; i++)
-	{
-		printf("xxxxxxxxxxxxxxxxxxx\n");
-		printf("i = %d\n", i);
-		printf("coders[%d] = %ld\n", i, coders[i]->coder_id);
-		printf("left = %ld\n", coders[i]->left_dongle->dongle_id);
-		printf("right = %ld\n", coders[i]->right_dongle->dongle_id);
-	}
+	return  (free(inputs), 0);
+	// printf("size = %ld\n", inputs->number_of_coders);
+	create_threads(coders, inputs->number_of_coders);
+	// printf("xxxxxxxxxxxxxxxxxx\n");
+	// for (int i = 0; i < inputs->number_of_coders; i++)
+	// {
+		// 	printf("xxxxxxxxxxxxxxxxxxx\n");
+		// 	printf("i = %d\n", i);
+		// 	printf("coders[%d] = %ld\n", i, coders[i]->coder_id);
+		// 	printf("left = %ld\n", coders[i]->left_dongle->dongle_id);
+		// 	printf("right = %ld\n", coders[i]->right_dongle->dongle_id);
+		// }
+	free_coders(coders, dongles, inputs->number_of_coders);
 	free(inputs);
 	return (0);
 }
 
 int	main(int ac, char *av[])
 {
-	int		i;
+	size_t		i;
 	t_input	*t_input;
 
 	i = 1;
