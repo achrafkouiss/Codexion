@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/12 15:28:59 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/19 11:55:40 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,12 +15,14 @@
 
 # include "pthread.h"
 # include <stdio.h>
+# include <unistd.h>
 # include <stdlib.h>
 # include <string.h>
 # include <sys/time.h>
 
 // typedef struct s_coder t_coder;
 typedef struct s_heap t_heap;
+typedef struct s_input t_input;
 typedef struct s_dongle t_dongle;
 
 typedef struct s_coder
@@ -29,10 +31,11 @@ typedef struct s_coder
 	size_t			id;
 	int				counter;
 	long			last_compile_time;
-	long			priority;
+	struct timeval	priority;
 	t_dongle		*left_dongle;
 	t_dongle		*right_dongle;
 	pthread_mutex_t *lock2;
+	t_input			*inputs;
 }					t_coder;
 
 typedef struct s_heap
@@ -46,6 +49,7 @@ typedef struct s_dongle
 {
 	long	dongle_id;
 	pthread_mutex_t	lock;
+	pthread_cond_t	cond;
 	int			status;
 	long		last_compile_time;
 	t_heap			*request;

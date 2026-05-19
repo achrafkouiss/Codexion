@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/12 15:57:22 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/19 11:55:48 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,7 @@ t_dongle *init_dongle(size_t capacity)
 	return dongles;
 }
 
-t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock)
+t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock, t_input *inputs)
 {
 	size_t i;
 	t_coder		*coders;
@@ -88,8 +88,8 @@ t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock)
 	{
 		coders[i].counter = 0;
 		coders[i].last_compile_time = 0;
-		coders[i].priority = 0;
 		coders[i].id = i;
+		coders[i].inputs = inputs;
 		coders[i].right_dongle = &dongles[i];
 		coders[i].lock2 = lock;
 		if (capacity == 1)
@@ -99,7 +99,6 @@ t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock)
 		else
 		coders[i].left_dongle = &dongles[i + 1];
 		i++;
-		// printf("xxxxxxxxxxxxxxxxxx\n");
 	}
 	return (coders);
 }
@@ -117,7 +116,7 @@ int	codexion(int ac, char *av[])
 		return (0);
 	// printf("size = %ld\n", inputs->number_of_coders);
 	dongles = init_dongle(inputs->number_of_coders);
-	coders = init_coders(dongles, inputs->number_of_coders, &lock);
+	coders = init_coders(dongles, inputs->number_of_coders, &lock, inputs);
 	if (!coders)
 	return  (free(inputs), 0);
 	// printf("size = %ld\n", inputs->number_of_coders);
