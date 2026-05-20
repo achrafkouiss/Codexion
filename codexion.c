@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/19 11:55:48 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/20 11:27:51 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,6 +65,7 @@ t_dongle *init_dongle(size_t capacity)
 	{
 		pthread_mutex_init(&dongles[i].lock, NULL);
 		dongles[i].dongle_id = i;
+		dongles[i].cooldown = time_in_ms();
 		dongles[i].status = 0;
 		dongles[i].last_compile_time = 0;
 		dongles[i].request = init_heap(dongles, capacity, i);
@@ -87,7 +88,7 @@ t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock, 
 	while (i < capacity)
 	{
 		coders[i].counter = 0;
-		coders[i].last_compile_time = 0;
+		coders[i].last_compile_time = time_in_ms() - inputs->time_to_compile;
 		coders[i].id = i;
 		coders[i].inputs = inputs;
 		coders[i].right_dongle = &dongles[i];

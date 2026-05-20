@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/19 11:55:40 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/20 11:25:16 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,8 +30,8 @@ typedef struct s_coder
 	pthread_t		coder_id;
 	size_t			id;
 	int				counter;
-	long			last_compile_time;
-	struct timeval	priority;
+	long long		last_compile_time;
+	long long		priority;
 	t_dongle		*left_dongle;
 	t_dongle		*right_dongle;
 	pthread_mutex_t *lock2;
@@ -51,7 +51,8 @@ typedef struct s_dongle
 	pthread_mutex_t	lock;
 	pthread_cond_t	cond;
 	int			status;
-	long		last_compile_time;
+	long long	last_compile_time;
+	long long		cooldown;
 	t_heap			*request;
 	
 }					t_dongle;
@@ -84,10 +85,10 @@ typedef struct s_monitor
 // }					t_heap;
 
 
+long long			time_in_ms();
 t_input				*parsing(int ac, char *av[]);
 void				*routine(void *arg);
 void				create_threads(t_coder *coders, size_t capacity);
 int					codexion(int ac, char *av[]);
-
 
 #endif

@@ -1,34 +1,23 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
 int main()
 {
-
-    int nbr;
-    int i = 0;
-    int j = 0;
+    char x[4];
+    int n;
     int counter = 0;
-    int n_count;
 
-    scanf("%d", &nbr);
-    int arr[nbr][3];
-    i = 0;
-    while(i < nbr)
+    scanf("%d", &n);
+    for (int i = 0; i < n; i++)
     {
-        j = 0;
-        while (j < nbr)
-        scanf("%d", &arr[i][j++]);
-        i++;
-    }
-    for (i = 0; i < nbr; i++)
-    {
-        n_count = 0;
-        for (j = 0; j < 3; j++)
-            if (arr[i][j] == 1)
-            n_count++;
-        if (n_count >= 2)
+        scanf("%3s", x);
+        if (!strcmp("X++", x) || !strcmp("++X", x))
             counter++;
+        else if (!strcmp("--X", x) || !strcmp("X--", x))
+            counter--;
+        else
+            return 1;
     }
     printf("%d\n", counter);
+    return 0;
 }
- 
