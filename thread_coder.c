@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/12 11:54:13 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/12 15:47:02 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/24 17:46:06 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,8 @@ void create_threads(t_coder *coders, size_t capacity)
     size_t i;
 
     i = 0;
-    pthread_mutex_init(coders[0].lock2, NULL);
+    pthread_mutex_init(coders[0].print_lock, NULL);
+    coders->inputs->start = time_in_ms();
     while (i < capacity)
     {
         pthread_create(&coders[i].coder_id, NULL, routine, &coders[i]);
@@ -29,4 +30,5 @@ void create_threads(t_coder *coders, size_t capacity)
         pthread_join(coders[i].coder_id, NULL);
         i++;
     }
+    pthread_mutex_destroy(coders[0].print_lock);
 }

@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/20 11:27:51 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/24 17:45:02 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,7 @@ t_coder *init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock, 
 		coders[i].id = i;
 		coders[i].inputs = inputs;
 		coders[i].right_dongle = &dongles[i];
-		coders[i].lock2 = lock;
+		coders[i].print_lock = lock;
 		if (capacity == 1)
 		coders[i].left_dongle = NULL;
 		else if (i == capacity - 1)
@@ -109,7 +109,7 @@ int	codexion(int ac, char *av[])
 	t_input		*inputs;
 	t_dongle	*dongles;
 	t_coder		*coders;
-	pthread_mutex_t lock;
+	pthread_mutex_t print_lock;
 	// t_monitor	*monitor;
 
 	inputs = parsing(ac, av);
@@ -117,7 +117,8 @@ int	codexion(int ac, char *av[])
 		return (0);
 	// printf("size = %ld\n", inputs->number_of_coders);
 	dongles = init_dongle(inputs->number_of_coders);
-	coders = init_coders(dongles, inputs->number_of_coders, &lock, inputs);
+	coders = init_coders(dongles, inputs->number_of_coders, &print_lock, inputs);
+	// pthread_mutex_init(&print_lock, NULL); // i should make sure that i destroy this one
 	if (!coders)
 	return  (free(inputs), 0);
 	// printf("size = %ld\n", inputs->number_of_coders);

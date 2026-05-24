@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/20 11:25:16 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/24 17:42:08 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,11 +19,12 @@
 # include <stdlib.h>
 # include <string.h>
 # include <sys/time.h>
-
+// don't forget to add a mutex to the ft_print so it is protected from data race/race condition
 // typedef struct s_coder t_coder;
 typedef struct s_heap t_heap;
 typedef struct s_input t_input;
 typedef struct s_dongle t_dongle;
+
 
 typedef struct s_coder
 {
@@ -34,7 +35,7 @@ typedef struct s_coder
 	long long		priority;
 	t_dongle		*left_dongle;
 	t_dongle		*right_dongle;
-	pthread_mutex_t *lock2;
+	pthread_mutex_t *print_lock;
 	t_input			*inputs;
 }					t_coder;
 
@@ -57,7 +58,6 @@ typedef struct s_dongle
 	
 }					t_dongle;
 
-
 typedef struct s_input
 {
 	size_t			number_of_coders;
@@ -68,6 +68,7 @@ typedef struct s_input
 	long			number_of_compiles_required;
 	long			dongle_cooldown;
 	char			*scheduler;
+	long			start;
 }					t_input;
 
 typedef struct s_monitor
