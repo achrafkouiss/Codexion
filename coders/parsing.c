@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:50 by akouiss           #+#    #+#             */
-/*   Updated: 2026/04/21 15:05:29 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/05/31 01:22:53 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,5 +84,7 @@ t_input	*parsing(int ac, char *av[])
 		free(inputs);
 		return (NULL);
 	}
+	pthread_mutex_init(&inputs->stop_lock, NULL);
+	inputs->stop = 0;
 	return (inputs);
 }
