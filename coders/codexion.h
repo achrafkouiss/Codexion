@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/31 23:43:19 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/01 13:12:25 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,6 @@ typedef struct s_coder
 {
 	pthread_t			coder_id;
 	size_t				id;
-	int					counter;
 	long long			last_compile_time;
 	long long			priority;
 	int					burnout;
@@ -54,7 +53,6 @@ typedef struct s_dongle
 	pthread_cond_t		cond;
 	int					status;
 	long long			last_compile_time;
-	long long			cooldown;
 	t_heap				*request;
 
 }						t_dongle;
@@ -107,7 +105,7 @@ void					refactoring(t_coder *coder);
 t_input					*parsing(int ac, char *av[]);
 void					*routine(void *arg);
 void					*monitor_routine(void *arg);
-void					create_threads(t_coder *coders, size_t capacity,
+void					*create_threads(t_coder *coders, size_t capacity,
 							t_monitor *monitor);
 int						codexion(int ac, char *av[]);
 

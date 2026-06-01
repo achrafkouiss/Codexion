@@ -6,16 +6,18 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/12 11:54:13 by akouiss           #+#    #+#             */
-/*   Updated: 2026/05/31 03:16:04 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/01 13:12:47 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-void	create_threads(t_coder *coders, size_t capacity, t_monitor *monitor)
+void	*create_threads(t_coder *coders, size_t capacity, t_monitor *monitor)
 {
 	size_t i;
 
+	if (!coders || !monitor)
+		return (NULL);
 	i = 0;
 	pthread_mutex_init(coders[0].print_lock, NULL);
 	coders->inputs->start = time_in_ms();
