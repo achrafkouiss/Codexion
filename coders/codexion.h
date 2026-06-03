@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/01 13:12:25 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/03 14:40:13 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ typedef struct s_coder
 	long long			last_compile_time;
 	long long			priority;
 	int					burnout;
+	int					counter;
 	t_dongle			*left_dongle;
 	t_dongle			*right_dongle;
 	pthread_mutex_t		*print_lock;

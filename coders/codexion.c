@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/01 13:54:24 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/03 21:42:37 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,6 +106,7 @@ t_coder	*init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock,
 		coders[i].id = i;
 		coders[i].inputs = inputs;
 		coders[i].burnout = 0;
+		coders[i].counter = 0;
 		coders[i].right_dongle = &dongles[i];
 		coders[i].print_lock = lock;
 		if (capacity == 1)
@@ -157,7 +158,7 @@ int	codexion(int ac, char *av[])
 	create_threads(coders, inputs->number_of_coders, monitor);
 	free_coders(coders, dongles, inputs->number_of_coders);
 	pthread_mutex_destroy(&monitor->monitor_lock);
-	// pthread_mutex_destroy(&print_lock); no need to be freed already freed on thread_coder.c
+
 	free(inputs);
 	free(monitor);
 	return (0);

@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/12 11:54:13 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/01 13:12:47 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/03 14:23:13 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@ void	*create_threads(t_coder *coders, size_t capacity, t_monitor *monitor)
 	if (!coders || !monitor)
 		return (NULL);
 	i = 0;
-	pthread_mutex_init(coders[0].print_lock, NULL);
+	// pthread_mutex_init(coders[0].print_lock, NULL);
 	coders->inputs->start = time_in_ms();
 	pthread_create(&monitor->monitor_id, NULL, monitor_routine, monitor);
 	while (i < capacity)

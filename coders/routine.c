@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/01 00:45:31 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/03 21:18:06 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,10 @@ void	*request_dongle(t_coder *coder, t_dongle *dongle)
 		pthread_mutex_unlock(&smallest->lock);
 	}
 	pthread_mutex_lock(&dongle->lock);
-	coder->priority = time_in_ms();
+	if (!strcmp(coder->inputs->scheduler, "fifo"))
+		coder->priority = time_in_ms();
+	else
+		coder->priority = coder->last_compile_time + coder->inputs->time_to_burnout;
 	push_coder(coder, dongle->request);
 	pthread_mutex_unlock(&dongle->lock);
 	return (NULL);
@@ -123,9 +126,13 @@ int	take_both_dongles(t_coder *coder)
 void	*routine(void *arg)
 {
 	t_coder	*coder;
-	int		i;
 
-	coder = arg;
+	coder = (t_coder *)arg;
+	if (!coder)
+		return (NULL);
+	pthread_mutex_lock(&coder->state_lock);
+	coder->last_compile_time = time_in_ms();
+	pthread_mutex_unlock(&coder->state_lock);
 	if (coder->left_dongle == NULL)
 	{
 		pthread_mutex_lock(&coder->right_dongle->lock);
@@ -135,11 +142,7 @@ void	*routine(void *arg)
 		pthread_mutex_unlock(&coder->right_dongle->lock);
 		return (NULL);
 	}
-	i = 0;
-	pthread_mutex_lock(&coder->state_lock);
-	coder->last_compile_time = time_in_ms();
-	pthread_mutex_unlock(&coder->state_lock);
-	while (i < coder->inputs->number_of_compiles_required
+	while (coder->counter < coder->inputs->number_of_compiles_required
 		&& !is_stopped(coder->inputs))
 	{
 		check_dongles(coder);
@@ -157,7 +160,6 @@ void	*routine(void *arg)
 		release_dongle(coder);
 		debugging(coder);
 		refactoring(coder);
-		i++;
 		pthread_mutex_lock(&coder->inputs->monitor->monitor_lock);
 		coder->inputs->monitor->finished_count++;
 		pthread_mutex_unlock(&coder->inputs->monitor->monitor_lock);
