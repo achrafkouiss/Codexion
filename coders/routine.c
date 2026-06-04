@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:51:56 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 22:12:24 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 void	*request_dongle(t_coder *coder, t_dongle *dongle)
 {
 	t_dongle	*smallest;
+	long prio;
 
 	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
 		smallest = coder->left_dongle;
@@ -42,8 +43,12 @@ void	*request_dongle(t_coder *coder, t_dongle *dongle)
 		pthread_mutex_unlock(&coder->state_lock);
 	}
 	pthread_mutex_unlock(&dongle->lock);
+	pthread_mutex_lock(&coder->state_lock);
+	prio = coder->priority;
+	pthread_mutex_unlock(&coder->state_lock);
+
 	pthread_mutex_lock(&dongle->request->lock);
-	push_coder(coder, dongle->request);
+	push_coder(coder->id, prio, dongle->request);
 	pthread_mutex_unlock(&dongle->request->lock);
 	return (NULL);
 }
@@ -114,7 +119,8 @@ int	take_both_dongles(t_coder *coder)
 		if (first->status == 0 && second->status == 0
 			&& first_ready <= time_in_ms() && second_ready <= time_in_ms()
 			&& first->request->arr[0].id == coder->id
-			&& second->request->arr[0].id == coder->id)
+			&& second->request->arr[0].id == coder->id
+		)
 		{
 			pop_coder(first->request);
 			pop_coder(second->request);

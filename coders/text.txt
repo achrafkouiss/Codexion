@@ -7,7 +7,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:57:10 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:29:30 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,21 +53,38 @@ void	*free_coders(t_coder *coders, t_dongle *dongles, size_t size)
 	return (free_dongles(dongles, size));
 }
 
+// t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
+// {
+// 	t_coder	*coder;
+// 	t_heap	*heap;
+
+// 	heap = malloc(sizeof(t_heap));
+// 	if (!heap)
+// 		return (NULL);
+// 	heap->arr = malloc(sizeof(t_coder) * 2);
+// 	if (!heap->arr)
+// 		return (NULL);
+// 	heap->capacity = capacity;
+// 	heap->size = 0;
+// 	if (pthread_mutex_init(&heap->lock, NULL))
+// 			return (free_dongles(dongles, size));
+// 	return (heap);
+// }
+
 t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
 {
-	t_coder	*coder;
 	t_heap	*heap;
 
 	heap = malloc(sizeof(t_heap));
 	if (!heap)
 		return (NULL);
-	heap->arr = malloc(sizeof(t_coder) * 2);
+	heap->arr = malloc(sizeof(t_heap_entry) * capacity);
 	if (!heap->arr)
 		return (NULL);
 	heap->capacity = capacity;
 	heap->size = 0;
 	if (pthread_mutex_init(&heap->lock, NULL))
-			return (free_dongles(dongles, size));
+		return (free_dongles(dongles, size));
 	return (heap);
 }
 
@@ -201,7 +218,7 @@ int	main(int ac, char *av[])
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:48:06 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:29:10 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -236,13 +253,27 @@ typedef struct s_coder
 	t_input				*inputs;
 }						t_coder;
 
+typedef struct s_heap_entry
+{
+    size_t          id;
+    long            priority;
+}                   t_heap_entry;
+
 typedef struct s_heap
 {
-	t_coder				*arr;
+	t_heap_entry		*arr;
 	long				capacity;
 	long				size;
 	pthread_mutex_t		lock;
 }						t_heap;
+
+// typedef struct s_heap
+// {
+// 	t_coder				*arr;
+// 	long				capacity;
+// 	long				size;
+// 	pthread_mutex_t		lock;
+// }						t_heap;
 
 typedef struct s_dongle
 {
@@ -292,8 +323,9 @@ void					ft_print(char *str, t_coder *coder, int force);
 int						is_stopped(t_input *inputs);
 
 // minheap_implementation.c
-void					push_coder(t_coder *coder, t_heap *heap);
-t_coder					pop_coder(t_heap *heap);
+// void					push_coder(t_coder *coder, t_heap *heap);
+void    push_coder(size_t id, long priority, t_heap *heap);
+size_t					pop_coder(t_heap *heap);
 
 // process.c
 void					compiling(t_coder *coder);
@@ -317,7 +349,7 @@ int						codexion(int ac, char *av[]);
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/27 14:22:15 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 16:19:03 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:47:33 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -414,96 +446,152 @@ debug: $(CFILES) $(DEPS)
 
 .PHONY: all clean fclean re
 ==> minheap_implementation.c <==
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   minheap_implementation.c                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/31 01:37:38 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:33:40 by akouiss          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+// /* ************************************************************************** */
+// /*                                                                            */
+// /*                                                        :::      ::::::::   */
+// /*   minheap_implementation.c                           :+:      :+:    :+:   */
+// /*                                                    +:+ +:+         +:+     */
+// /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+// /*                                                +#+#+#+#+#+   +#+           */
+// /*   Created: 2026/05/31 01:37:38 by akouiss           #+#    #+#             */
+// /*   Updated: 2026/06/04 17:33:40 by akouiss          ###   ########.fr       */
+// /*                                                                            */
+// /* ************************************************************************** */
+
+// #include "codexion.h"
+
+// long	get_priority(t_coder *c)
+// {
+// 	long	p;
+
+// 	pthread_mutex_lock(&c->state_lock);
+// 	p = c->priority;
+// 	pthread_mutex_unlock(&c->state_lock);
+// 	return (p);
+// }
+
+// static void	swap(t_coder *a, t_coder *b)
+// {
+// 	t_coder	temp;
+
+// 	temp = *a;
+// 	*a = *b;
+// 	*b = temp;
+// }
+
+// static void	heap_loop(t_heap *heap)
+// {
+// 	size_t	l;
+// 	size_t	r;
+// 	size_t	i;
+// 	size_t	smallest;
+
+// 	i = 0;
+// 	while (1)
+// 	{
+// 		smallest = i;
+// 		l = 2 * i + 1;
+// 		r = 2 * i + 2;
+// 		if (l < heap->size
+// 			&& get_priority(&heap->arr[l]) < get_priority(&heap->arr[smallest]))
+// 			smallest = l;
+// 		if (r < heap->size
+// 			&& get_priority(&heap->arr[r]) < get_priority(&heap->arr[smallest]))
+// 			smallest = r;
+// 		if (smallest == i)
+// 			break ;
+// 		swap(&heap->arr[i], &heap->arr[smallest]);
+// 		i = smallest;
+// 	}
+// }
+
+// void	push_coder(t_coder *coder, t_heap *heap)
+// {
+// 	size_t	index;
+
+// 	index = heap->size;
+// 	// pthread_mutex_lock(&coder->state_lock);
+// 	heap->arr[heap->size++] = *coder;
+// 	// pthread_mutex_unlock(&coder->state_lock);
+
+// 	while (index > 0 && get_priority(&heap->arr[(index - 1) / 2]) > get_priority(&heap->arr[index]))
+// 	{
+// 		swap(&heap->arr[index], &heap->arr[(index - 1) / 2]);
+// 		index = (index - 1) / 2;
+// 	}
+// }
+
+// t_coder	pop_coder(t_heap *heap)
+// {
+// 	t_coder	popped;
+
+// 	if (heap->size == 0)
+// 		return ((t_coder){0});
+// 	popped = heap->arr[0];
+// 	heap->size--;
+// 	if (heap->size == 0)
+// 		return (popped);
+// 	heap->arr[0] = heap->arr[heap->size];
+// 	heap_loop(heap);
+// 	return (popped);
+// }
+
+
+
 
 #include "codexion.h"
 
-long	get_priority(t_coder *c)
+static void swap(t_heap_entry *a, t_heap_entry *b)
 {
-	long	p;
-
-	pthread_mutex_lock(&c->state_lock);
-	p = c->priority;
-	pthread_mutex_unlock(&c->state_lock);
-	return (p);
+    t_heap_entry temp = *a;
+    *a = *b;
+    *b = temp;
 }
 
-static void	swap(t_coder *a, t_coder *b)
+static void heap_loop(t_heap *heap)
 {
-	t_coder	temp;
-
-	temp = *a;
-	*a = *b;
-	*b = temp;
+    size_t i = 0;
+    while (1)
+    {
+        size_t smallest = i;
+        size_t l = 2 * i + 1;
+        size_t r = 2 * i + 2;
+        if (l < (size_t)heap->size && heap->arr[l].priority < heap->arr[smallest].priority)
+            smallest = l;
+        if (r < (size_t)heap->size && heap->arr[r].priority < heap->arr[smallest].priority)
+            smallest = r;
+        if (smallest == i)
+            break;
+        swap(&heap->arr[i], &heap->arr[smallest]);
+        i = smallest;
+    }
 }
 
-static void	heap_loop(t_heap *heap)
+void push_coder(size_t id, long priority, t_heap *heap)
 {
-	size_t	l;
-	size_t	r;
-	size_t	i;
-	size_t	smallest;
-
-	i = 0;
-	while (1)
-	{
-		smallest = i;
-		l = 2 * i + 1;
-		r = 2 * i + 2;
-		if (l < heap->size
-			&& get_priority(&heap->arr[l]) < get_priority(&heap->arr[smallest]))
-			smallest = l;
-		if (r < heap->size
-			&& get_priority(&heap->arr[r]) < get_priority(&heap->arr[smallest]))
-			smallest = r;
-		if (smallest == i)
-			break ;
-		swap(&heap->arr[i], &heap->arr[smallest]);
-		i = smallest;
-	}
+    size_t index = heap->size;
+    heap->arr[index].id = id;
+    heap->arr[index].priority = priority;
+    heap->size++;
+    while (index > 0 && heap->arr[(index - 1) / 2].priority > heap->arr[index].priority)
+    {
+        swap(&heap->arr[index], &heap->arr[(index - 1) / 2]);
+        index = (index - 1) / 2;
+    }
 }
 
-void	push_coder(t_coder *coder, t_heap *heap)
+size_t pop_coder(t_heap *heap)
 {
-	size_t	index;
-
-	index = heap->size;
-	// pthread_mutex_lock(&coder->state_lock);
-	heap->arr[heap->size++] = *coder;
-	// pthread_mutex_unlock(&coder->state_lock);
-
-	while (index > 0 && get_priority(&heap->arr[(index - 1) / 2]) > get_priority(&heap->arr[index]))
-	{
-		swap(&heap->arr[index], &heap->arr[(index - 1) / 2]);
-		index = (index - 1) / 2;
-	}
+    if (heap->size == 0)
+        return ((size_t)-1);
+    size_t id = heap->arr[0].id;
+    heap->size--;
+    if (heap->size == 0)
+        return (id);
+    heap->arr[0] = heap->arr[heap->size];
+    heap_loop(heap);
+    return (id);
 }
-
-t_coder	pop_coder(t_heap *heap)
-{
-	t_coder	popped;
-
-	if (heap->size == 0)
-		return ((t_coder){0});
-	popped = heap->arr[0];
-	heap->size--;
-	if (heap->size == 0)
-		return (popped);
-	heap->arr[0] = heap->arr[heap->size];
-	heap_loop(heap);
-	return (popped);
-}
-
 ==> monitor.c <==
 /* ************************************************************************** */
 /*                                                                            */
@@ -679,7 +767,7 @@ t_input	*parsing(int ac, char *av[])
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/31 01:44:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 16:19:22 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:46:39 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -724,6 +812,7 @@ void	compiling(t_coder *coder)
 	pthread_mutex_unlock(&coder->right_dongle->lock);
 }
 
+
 void	debugging(t_coder *coder)
 {
 	// burnout_check(coder);
@@ -746,7 +835,7 @@ void	refactoring(t_coder *coder)
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:51:56 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:18:29 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -755,6 +844,7 @@ void	refactoring(t_coder *coder)
 void	*request_dongle(t_coder *coder, t_dongle *dongle)
 {
 	t_dongle	*smallest;
+	long prio;
 
 	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
 		smallest = coder->left_dongle;
@@ -782,8 +872,12 @@ void	*request_dongle(t_coder *coder, t_dongle *dongle)
 		pthread_mutex_unlock(&coder->state_lock);
 	}
 	pthread_mutex_unlock(&dongle->lock);
+	pthread_mutex_lock(&coder->state_lock);
+	prio = coder->priority;
+	pthread_mutex_unlock(&coder->state_lock);
+
 	pthread_mutex_lock(&dongle->request->lock);
-	push_coder(coder, dongle->request);
+	push_coder(coder->id, prio, dongle->request);
 	pthread_mutex_unlock(&dongle->request->lock);
 	return (NULL);
 }
@@ -853,8 +947,9 @@ int	take_both_dongles(t_coder *coder)
 			+ coder->inputs->dongle_cooldown;
 		if (first->status == 0 && second->status == 0
 			&& first_ready <= time_in_ms() && second_ready <= time_in_ms()
-			&& first->request->arr[0].id == coder->id
-			&& second->request->arr[0].id == coder->id)
+			// && first->request->arr[0].id == coder->id
+			// && second->request->arr[0].id == coder->id
+		)
 		{
 			pop_coder(first->request);
 			pop_coder(second->request);

@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:48:06 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:29:10 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,13 +41,27 @@ typedef struct s_coder
 	t_input				*inputs;
 }						t_coder;
 
+typedef struct s_heap_entry
+{
+    size_t          id;
+    long            priority;
+}                   t_heap_entry;
+
 typedef struct s_heap
 {
-	t_coder				*arr;
+	t_heap_entry		*arr;
 	long				capacity;
 	long				size;
 	pthread_mutex_t		lock;
 }						t_heap;
+
+// typedef struct s_heap
+// {
+// 	t_coder				*arr;
+// 	long				capacity;
+// 	long				size;
+// 	pthread_mutex_t		lock;
+// }						t_heap;
 
 typedef struct s_dongle
 {
@@ -97,8 +111,9 @@ void					ft_print(char *str, t_coder *coder, int force);
 int						is_stopped(t_input *inputs);
 
 // minheap_implementation.c
-void					push_coder(t_coder *coder, t_heap *heap);
-t_coder					pop_coder(t_heap *heap);
+// void					push_coder(t_coder *coder, t_heap *heap);
+void    push_coder(size_t id, long priority, t_heap *heap);
+size_t					pop_coder(t_heap *heap);
 
 // process.c
 void					compiling(t_coder *coder);

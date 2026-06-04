@@ -6,12 +6,12 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:57:10 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 22:13:38 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
-
+// don't forget to add  max coders
 void	*free_dongles(t_dongle *dongles, size_t size)
 {
 	size_t	i;
@@ -52,21 +52,38 @@ void	*free_coders(t_coder *coders, t_dongle *dongles, size_t size)
 	return (free_dongles(dongles, size));
 }
 
+// t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
+// {
+// 	t_coder	*coder;
+// 	t_heap	*heap;
+
+// 	heap = malloc(sizeof(t_heap));
+// 	if (!heap)
+// 		return (NULL);
+// 	heap->arr = malloc(sizeof(t_coder) * 2);
+// 	if (!heap->arr)
+// 		return (NULL);
+// 	heap->capacity = capacity;
+// 	heap->size = 0;
+// 	if (pthread_mutex_init(&heap->lock, NULL))
+// 			return (free_dongles(dongles, size));
+// 	return (heap);
+// }
+
 t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
 {
-	t_coder	*coder;
 	t_heap	*heap;
 
 	heap = malloc(sizeof(t_heap));
 	if (!heap)
 		return (NULL);
-	heap->arr = malloc(sizeof(t_coder) * 2);
+	heap->arr = malloc(sizeof(t_heap_entry) * capacity);
 	if (!heap->arr)
 		return (NULL);
 	heap->capacity = capacity;
 	heap->size = 0;
 	if (pthread_mutex_init(&heap->lock, NULL))
-			return (free_dongles(dongles, size));
+		return (free_dongles(dongles, size));
 	return (heap);
 }
 

@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/31 01:44:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 16:19:22 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 21:51:31 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ void	compiling(t_coder *coder)
 	coder->right_dongle->last_compile_time = time_in_ms();
 	pthread_mutex_unlock(&coder->right_dongle->lock);
 }
+
 
 void	debugging(t_coder *coder)
 {
