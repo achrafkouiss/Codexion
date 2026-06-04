@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/03 21:42:37 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 17:57:10 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ void	*free_dongles(t_dongle *dongles, size_t size)
 		if (dongles[i].request)
 			free(dongles[i].request->arr);
 		pthread_mutex_destroy(&dongles[i].lock);
+		pthread_mutex_destroy(&dongles[i].request->lock);
 		pthread_cond_destroy(&dongles[i].cond);
 		free(dongles[i].request);
 		i++;
@@ -34,7 +35,18 @@ void	*free_dongles(t_dongle *dongles, size_t size)
 
 void	*free_coders(t_coder *coders, t_dongle *dongles, size_t size)
 {
-	// printf("xxxxxxxxxxxxxxxxxx\n");
+	size_t	i;
+
+	if (!dongles)
+		return (NULL);
+	i = 0;
+	while (i < size)
+	{
+		pthread_mutex_destroy(&coders[i].state_lock);
+		// pthread_mutex_destroy(&coders[i].lock);
+
+		i++;
+	}
 	free(coders);
 	coders = NULL;
 	return (free_dongles(dongles, size));
@@ -53,6 +65,8 @@ t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
 		return (NULL);
 	heap->capacity = capacity;
 	heap->size = 0;
+	if (pthread_mutex_init(&heap->lock, NULL))
+			return (free_dongles(dongles, size));
 	return (heap);
 }
 
@@ -102,10 +116,12 @@ t_coder	*init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock,
 	{
 		if (pthread_mutex_init(&coders[i].state_lock, NULL))
 			return (free_coders(coders, dongles, capacity));
+		// if (pthread_mutex_init(&coders[i].lock, NULL))
+		// 	return (free_coders(coders, dongles, capacity));
 		coders[i].last_compile_time = time_in_ms() - inputs->time_to_compile;
 		coders[i].id = i;
 		coders[i].inputs = inputs;
-		coders[i].burnout = 0;
+		// coders[i].burnout = 0;
 		coders[i].counter = 0;
 		coders[i].right_dongle = &dongles[i];
 		coders[i].print_lock = lock;

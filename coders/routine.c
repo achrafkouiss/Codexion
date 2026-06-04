@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/03 21:18:06 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 17:51:56 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,11 +30,21 @@ void	*request_dongle(t_coder *coder, t_dongle *dongle)
 	}
 	pthread_mutex_lock(&dongle->lock);
 	if (!strcmp(coder->inputs->scheduler, "fifo"))
+	{
+		pthread_mutex_lock(&coder->state_lock);
 		coder->priority = time_in_ms();
+		pthread_mutex_unlock(&coder->state_lock);
+	}
 	else
+	{
+		pthread_mutex_lock(&coder->state_lock);
 		coder->priority = coder->last_compile_time + coder->inputs->time_to_burnout;
-	push_coder(coder, dongle->request);
+		pthread_mutex_unlock(&coder->state_lock);
+	}
 	pthread_mutex_unlock(&dongle->lock);
+	pthread_mutex_lock(&dongle->request->lock);
+	push_coder(coder, dongle->request);
+	pthread_mutex_unlock(&dongle->request->lock);
 	return (NULL);
 }
 void	check_dongles(t_coder *coder)
@@ -118,7 +128,7 @@ int	take_both_dongles(t_coder *coder)
 		}
 		pthread_mutex_unlock(&second->lock);
 		pthread_mutex_unlock(&first->lock);
-		usleep(100);
+		usleep(1000);
 	}
 	return (0);
 }
@@ -126,10 +136,9 @@ int	take_both_dongles(t_coder *coder)
 void	*routine(void *arg)
 {
 	t_coder	*coder;
+	int counter;
 
 	coder = (t_coder *)arg;
-	if (!coder)
-		return (NULL);
 	pthread_mutex_lock(&coder->state_lock);
 	coder->last_compile_time = time_in_ms();
 	pthread_mutex_unlock(&coder->state_lock);
@@ -142,7 +151,10 @@ void	*routine(void *arg)
 		pthread_mutex_unlock(&coder->right_dongle->lock);
 		return (NULL);
 	}
-	while (coder->counter < coder->inputs->number_of_compiles_required
+	pthread_mutex_lock(&coder->state_lock);
+	counter = coder->counter;
+	pthread_mutex_unlock(&coder->state_lock);
+	while (counter < coder->inputs->number_of_compiles_required
 		&& !is_stopped(coder->inputs))
 	{
 		check_dongles(coder);
@@ -160,10 +172,17 @@ void	*routine(void *arg)
 		release_dongle(coder);
 		debugging(coder);
 		refactoring(coder);
-		pthread_mutex_lock(&coder->inputs->monitor->monitor_lock);
-		coder->inputs->monitor->finished_count++;
-		pthread_mutex_unlock(&coder->inputs->monitor->monitor_lock);
+		pthread_mutex_lock(&coder->state_lock);
+		counter = coder->counter;
+		pthread_mutex_unlock(&coder->state_lock);
+		
 	}
+	
+	pthread_mutex_lock(&coder->inputs->monitor->monitor_lock);
+	coder->inputs->monitor->finished_count++;
+	pthread_mutex_unlock(&coder->inputs->monitor->monitor_lock);
+	// printf("routine: out here\n");
+	// printf("routine: out here\n");
 	return (NULL);
 }
 

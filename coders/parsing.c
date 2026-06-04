@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:50 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/01 13:33:12 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/03 22:34:33 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,7 @@ static long	ft_atol(char *str)
 static int	convert_string(char *ac[], t_input *inputs)
 {
 	inputs->number_of_coders = ft_atol(ac[1]);
+	// make sure to add specify the error
 	if (inputs->number_of_coders == 0 || inputs->number_of_coders == 2147483649)
 		return (0);
 	inputs->time_to_burnout = ft_atol(ac[2]);

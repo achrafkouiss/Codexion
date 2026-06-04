@@ -10,7 +10,7 @@ AOUT ?= 4 35 10 10 10 3 5 fifo
 all: $(NAME)
 
 $(NAME): $(CFILES) $(DEPS)
-	$(CC) $^ -o $@
+	$(CC) -g -lpthread $^ -o $@
 
 clean:
 	rm -f $(OFILES)

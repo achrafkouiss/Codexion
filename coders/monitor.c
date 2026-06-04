@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/27 01:39:49 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/03 21:51:24 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 17:56:25 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,6 @@ static void	stop_simulation(t_input *inputs, t_dongle *dongles, size_t n)
 	{
 		pthread_mutex_lock(&dongles[i].lock);
 		pthread_cond_broadcast(&dongles[i].cond);
-		// maybe when i broadcast after the pthread_cond_wait should be a check
 		pthread_mutex_unlock(&dongles[i].lock);
 		i++;
 	}
@@ -36,6 +35,7 @@ void	*monitor_routine(void *arg)
 	t_coder		*coders;
 	size_t		i;
 	long long	time_since_compile;
+	int			counter;
 	int			finished_count;
 
 	monitor = (t_monitor *)arg;
@@ -52,20 +52,14 @@ void	*monitor_routine(void *arg)
 		{
 			pthread_mutex_lock(&coders[i].state_lock);
 			time_since_compile = time_in_ms() - coders[i].last_compile_time;
+			counter = coders[i].counter;
 			pthread_mutex_unlock(&coders[i].state_lock);
 			if (time_since_compile >= coders[i].inputs->time_to_burnout
-				&& (coders[i].counter != coders[i].inputs->number_of_compiles_required))
+				&& (counter != coders[i].inputs->number_of_compiles_required))
 			{
-				// printf("coders[i].counter = %d\n", coders[i].counter);
-				// printf("coders[i].inputs->number_of_compiles_required = %ld\n", coders[i].inputs->number_of_compiles_required);
-				// pthread_mutex_lock(coders[i].print_lock);
-				if (!is_stopped(coders[i].inputs))
-				{
-					stop_simulation(coders[i].inputs, monitor->dongles,
-						coders[i].inputs->number_of_coders);
-					ft_print("burned out", &coders[i], 1);
-				}
-				// pthread_mutex_unlock(coders[i].print_lock);
+				stop_simulation(coders[i].inputs, monitor->dongles,
+					coders[i].inputs->number_of_coders);
+				ft_print("burned out", &coders[i], 1);
 				return (NULL);
 			}
 			i++;

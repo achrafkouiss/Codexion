@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/03 14:40:13 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/04 17:48:06 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,12 +31,13 @@ typedef struct s_coder
 	size_t				id;
 	long long			last_compile_time;
 	long long			priority;
-	int					burnout;
+	// int					burnout;
 	int					counter;
 	t_dongle			*left_dongle;
 	t_dongle			*right_dongle;
 	pthread_mutex_t		*print_lock;
 	pthread_mutex_t		state_lock;
+	pthread_mutex_t		lock;
 	t_input				*inputs;
 }						t_coder;
 
@@ -45,6 +46,7 @@ typedef struct s_heap
 	t_coder				*arr;
 	long				capacity;
 	long				size;
+	pthread_mutex_t		lock;
 }						t_heap;
 
 typedef struct s_dongle
@@ -91,7 +93,7 @@ typedef struct s_input
 long long				time_in_ms(void);
 void					timed_sleep(t_coder *coder, long long time);
 void					ft_print(char *str, t_coder *coder, int force);
-void					burnout_check(t_coder *coder);
+// void					burnout_check(t_coder *coder);
 int						is_stopped(t_input *inputs);
 
 // minheap_implementation.c
