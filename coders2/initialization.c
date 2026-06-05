@@ -1,54 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   codexion.c                                         :+:      :+:    :+:   */
+/*   initialization.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 10:25:06 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/05 12:03:20 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
-
-void	*free_dongles(t_dongle *dongles, size_t size)
-{
-	size_t	i;
-
-	if (!dongles)
-		return (NULL);
-	i = 0;
-	while (i < size)
-	{
-		if (dongles[i].request)
-			free(dongles[i].request->arr);
-		pthread_mutex_destroy(&dongles[i].lock);
-		pthread_mutex_destroy(&dongles[i].request->lock);
-		pthread_cond_destroy(&dongles[i].cond);
-		free(dongles[i].request);
-		i++;
-	}
-	free(dongles);
-	return (NULL);
-}
-
-void	*free_coders(t_coder *coders, t_dongle *dongles, size_t size)
-{
-	size_t	i;
-
-	if (!dongles)
-		return (NULL);
-	i = 0;
-	while (i < size)
-	{
-		pthread_mutex_destroy(&coders[i].state_lock);
-		i++;
-	}
-	free(coders);
-	coders = NULL;
-	return (free_dongles(dongles, size));
-}
 
 t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
 {
@@ -92,6 +54,22 @@ t_dongle	*init_dongle(size_t capacity)
 	return (dongles);
 }
 
+static void	init_coder_entry(t_coder *coders, t_dongle *dongles, size_t i,
+		t_input *inputs)
+{
+	coders[i].last_compile_time = time_in_ms() - inputs->time_to_compile;
+	coders[i].id = i;
+	coders[i].inputs = inputs;
+	coders[i].counter = 0;
+	coders[i].right_dongle = &dongles[i];
+	if (inputs->number_of_coders == 1)
+		coders[i].left_dongle = NULL;
+	else if (i == inputs->number_of_coders - 1)
+		coders[i].left_dongle = &dongles[0];
+	else
+		coders[i].left_dongle = &dongles[i + 1];
+}
+
 t_coder	*init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock,
 		t_input *inputs)
 {
@@ -113,21 +91,8 @@ t_coder	*init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock,
 	{
 		if (pthread_mutex_init(&coders[i].state_lock, NULL))
 			return (free_coders(coders, dongles, capacity));
-		// if (pthread_mutex_init(&coders[i].lock, NULL))
-		// 	return (free_coders(coders, dongles, capacity));
-		coders[i].last_compile_time = time_in_ms() - inputs->time_to_compile;
-		coders[i].id = i;
-		coders[i].inputs = inputs;
-		// coders[i].burnout = 0;
-		coders[i].counter = 0;
-		coders[i].right_dongle = &dongles[i];
+		init_coder_entry(coders, dongles, i, inputs);
 		coders[i].print_lock = lock;
-		if (capacity == 1)
-			coders[i].left_dongle = NULL;
-		else if (i == capacity - 1)
-			coders[i].left_dongle = &dongles[0];
-		else
-			coders[i].left_dongle = &dongles[i + 1];
 		i++;
 	}
 	return (coders);
@@ -149,35 +114,4 @@ t_monitor	*init_monitor(t_coder *coders, t_dongle *dongles)
 	monitor->coders = coders;
 	monitor->dongles = dongles;
 	return (monitor);
-}
-
-int	codexion(int ac, char *av[])
-{
-	t_input			*inputs;
-	t_dongle		*dongles;
-	t_coder			*coders;
-	pthread_mutex_t	print_lock;
-	t_monitor		*monitor;
-
-	inputs = parsing(ac, av);
-	if (!inputs)
-		return (0);
-	dongles = init_dongle(inputs->number_of_coders);
-	coders = init_coders(dongles, inputs->number_of_coders, &print_lock,
-			inputs);
-	monitor = init_monitor(coders, dongles);
-	if (!monitor)
-		return (free(inputs), 1);
-	inputs->monitor = monitor;
-	create_threads(coders, inputs->number_of_coders, monitor);
-	free_coders(coders, dongles, inputs->number_of_coders);
-	pthread_mutex_destroy(&monitor->monitor_lock);
-	free(inputs);
-	free(monitor);
-	return (0);
-}
-
-int	main(int ac, char *av[])
-{
-	codexion(ac, av);
 }

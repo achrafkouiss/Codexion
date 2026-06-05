@@ -1,0 +1,1034 @@
+==> codexion.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   codexion.c                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/06/05 11:21:59 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:55:55 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+int	codexion(int ac, char *av[])
+{
+	t_input			*inputs;
+	t_dongle		*dongles;
+	t_coder			*coders;
+	pthread_mutex_t	print_lock;
+	t_monitor		*monitor;
+
+	inputs = parsing(ac, av);
+	if (!inputs)
+		return (0);
+	dongles = init_dongle(inputs->number_of_coders);
+	coders = init_coders(dongles, inputs->number_of_coders, &print_lock,
+			inputs);
+	monitor = init_monitor(coders, dongles);
+	if (!monitor)
+		return (free(inputs), 1);
+	inputs->monitor = monitor;
+	create_threads(coders, inputs->number_of_coders, monitor);
+	free_coders(coders, dongles, inputs->number_of_coders);
+	pthread_mutex_destroy(&monitor->monitor_lock);
+	free(inputs);
+	free(monitor);
+	return (0);
+}
+
+int	main(int ac, char *av[])
+{
+	codexion(ac, av);
+	return (0);
+}
+
+==> codexion.h <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   codexion.h                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:52:51 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#ifndef CODEXION_H
+# define CODEXION_H
+
+# define MAX_CODERS 300
+
+# include "pthread.h"
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include <sys/time.h>
+# include <unistd.h>
+
+typedef struct s_heap	t_heap;
+typedef struct s_input	t_input;
+typedef struct s_dongle	t_dongle;
+
+typedef struct s_coder
+{
+	pthread_t			coder_id;
+	size_t				id;
+	long long			last_compile_time;
+	long long			priority;
+	int					counter;
+	t_dongle			*left_dongle;
+	t_dongle			*right_dongle;
+	pthread_mutex_t		*print_lock;
+	pthread_mutex_t		state_lock;
+	t_input				*inputs;
+}						t_coder;
+
+typedef struct s_heap_entry
+{
+	size_t				id;
+	long				priority;
+}						t_heap_entry;
+
+typedef struct s_heap
+{
+	t_heap_entry		*arr;
+	long				capacity;
+	long				size;
+	pthread_mutex_t		lock;
+}						t_heap;
+
+typedef struct s_dongle
+{
+	long				dongle_id;
+	pthread_mutex_t		lock;
+	pthread_cond_t		cond;
+	int					status;
+	long long			last_compile_time;
+	t_heap				*request;
+}						t_dongle;
+
+typedef struct s_monitor
+{
+	pthread_t			monitor_id;
+	pthread_mutex_t		monitor_lock;
+	int					finished_count;
+	t_coder				*coders;
+	t_dongle			*dongles;
+}						t_monitor;
+
+typedef struct s_input
+{
+	size_t				number_of_coders;
+	long				time_to_burnout;
+	long				time_to_compile;
+	long				time_to_debug;
+	long				time_to_refactor;
+	long				number_of_compiles_required;
+	long				dongle_cooldown;
+	char				*scheduler;
+	long				start;
+	int					stop;
+	t_monitor			*monitor;
+	pthread_mutex_t		stop_lock;
+}						t_input;
+
+// helper.c
+long long				time_in_ms(void);
+void					timed_sleep(t_coder *coder, long long time);
+void					ft_print(char *str, t_coder *coder, int force);
+int						is_stopped(t_input *inputs);
+
+// minheap_implementation.c
+void					push_coder(size_t id, long priority, t_heap *heap);
+size_t					pop_coder(t_heap *heap);
+
+// process.c
+void					lock_unlock_last_compile_time(t_coder *c,
+							t_dongle *dongle);
+void					compiling(t_coder *coder);
+void					debugging(t_coder *coder);
+void					refactoring(t_coder *coder);
+
+// dongle.c
+int						take_both_dongles(t_coder *coder);
+void					release_dongle(t_coder *coder);
+
+// free_resources.c
+void					*free_dongles(t_dongle *dongles, size_t size);
+void					*free_coders(t_coder *coders, t_dongle *dongles,
+							size_t size);
+
+// initialisation.c
+t_dongle				*init_dongle(size_t capacity);
+t_coder					*init_coders(t_dongle *dongles, size_t capacity,
+							pthread_mutex_t *lock, t_input *inputs);
+t_monitor				*init_monitor(t_coder *coders, t_dongle *dongles);
+t_heap					*init_heap(t_dongle *dongles, size_t capacity,
+							size_t size);
+
+// parsing.c
+t_input					*parsing(int ac, char *av[]);
+
+// routine.c
+void					*routine(void *arg);
+
+// monitore.c
+void					*monitor_routine(void *arg);
+
+// thread_coder.c
+void					create_threads(t_coder *coders, size_t capacity,
+							t_monitor *monitor);
+
+// codexion.c
+int						codexion(int ac, char *av[]);
+
+#endif
+
+==> dongle.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   dongle.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/06/05 11:10:11 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:18:52 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+static void	get_ordered_dongles(t_coder *coder, t_dongle **first,
+		t_dongle **second)
+{
+	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
+	{
+		*first = coder->left_dongle;
+		*second = coder->right_dongle;
+	}
+	else
+	{
+		*first = coder->right_dongle;
+		*second = coder->left_dongle;
+	}
+}
+
+static int	try_acquire(t_coder *coder, t_dongle *first, t_dongle *second)
+{
+	long long	first_ready;
+	long long	second_ready;
+
+	first_ready = first->last_compile_time + coder->inputs->dongle_cooldown;
+	second_ready = second->last_compile_time + coder->inputs->dongle_cooldown;
+	if (first->status == 0 && second->status == 0 && first_ready <= time_in_ms()
+		&& second_ready <= time_in_ms()
+		&& first->request->arr[0].id == coder->id
+		&& second->request->arr[0].id == coder->id)
+	{
+		pop_coder(first->request);
+		pop_coder(second->request);
+		first->status = 1;
+		second->status = 1;
+		return (1);
+	}
+	return (0);
+}
+
+static int	poll_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
+{
+	while (!is_stopped(coder->inputs))
+	{
+		pthread_mutex_lock(&first->lock);
+		pthread_mutex_lock(&second->lock);
+		if (try_acquire(coder, first, second))
+		{
+			pthread_mutex_unlock(&second->lock);
+			pthread_mutex_unlock(&first->lock);
+			ft_print("has taken a dongle", coder, 0);
+			ft_print("has taken a dongle", coder, 0);
+			return (1);
+		}
+		pthread_mutex_unlock(&second->lock);
+		pthread_mutex_unlock(&first->lock);
+		usleep(1000);
+	}
+	return (0);
+}
+
+int	take_both_dongles(t_coder *coder)
+{
+	t_dongle	*first;
+	t_dongle	*second;
+
+	get_ordered_dongles(coder, &first, &second);
+	return (poll_dongles(coder, first, second));
+}
+
+void	release_dongle(t_coder *coder)
+{
+	t_dongle	*first;
+	t_dongle	*second;
+
+	get_ordered_dongles(coder, &first, &second);
+	pthread_mutex_lock(&first->lock);
+	pthread_mutex_lock(&second->lock);
+	first->status = 0;
+	second->status = 0;
+	pthread_cond_broadcast(&first->cond);
+	pthread_cond_broadcast(&second->cond);
+	pthread_mutex_unlock(&second->lock);
+	pthread_mutex_unlock(&first->lock);
+}
+
+==> free_resources.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   free_resources.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/06/05 11:11:23 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:13:15 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+void	*free_dongles(t_dongle *dongles, size_t size)
+{
+	size_t	i;
+
+	if (!dongles)
+		return (NULL);
+	i = 0;
+	while (i < size)
+	{
+		if (dongles[i].request)
+			free(dongles[i].request->arr);
+		pthread_mutex_destroy(&dongles[i].lock);
+		pthread_mutex_destroy(&dongles[i].request->lock);
+		pthread_cond_destroy(&dongles[i].cond);
+		free(dongles[i].request);
+		i++;
+	}
+	free(dongles);
+	return (NULL);
+}
+
+void	*free_coders(t_coder *coders, t_dongle *dongles, size_t size)
+{
+	size_t	i;
+
+	if (!dongles)
+		return (NULL);
+	i = 0;
+	while (i < size)
+	{
+		pthread_mutex_destroy(&coders[i].state_lock);
+		i++;
+	}
+	free(coders);
+	coders = NULL;
+	return (free_dongles(dongles, size));
+}
+
+==> helper.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   helper.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/04/27 14:22:15 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 10:14:07 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+long long	time_in_ms(void)
+{
+	struct timeval	tv;
+
+	if (gettimeofday(&tv, NULL) != 0)
+	{
+		fprintf(stderr, "gettimeofday failed");
+		return (-1);
+	}
+	return (((long long)tv.tv_sec * 1000) + ((long long)tv.tv_usec / 1000));
+}
+
+void	timed_sleep(t_coder *coder, long long time)
+{
+	long long	start;
+
+	start = time_in_ms();
+	while ((time_in_ms() - start) < time && !is_stopped(coder->inputs))
+		usleep(1000);
+}
+
+void	ft_print(char *str, t_coder *coder, int force)
+{
+	long long	current_time;
+
+	pthread_mutex_lock(coder->print_lock);
+	if (!force && is_stopped(coder->inputs))
+	{
+		pthread_mutex_unlock(coder->print_lock);
+		return ;
+	}
+	current_time = time_in_ms() - coder->inputs->start;
+	printf("%lld %ld %s\n", current_time, coder->id, str);
+	pthread_mutex_unlock(coder->print_lock);
+}
+
+int	is_stopped(t_input *inputs)
+{
+	int	value;
+
+	pthread_mutex_lock(&inputs->stop_lock);
+	value = inputs->stop;
+	pthread_mutex_unlock(&inputs->stop_lock);
+	return (value);
+}
+
+==> initialization.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   initialization.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 12:03:20 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
+{
+	t_heap	*heap;
+
+	heap = malloc(sizeof(t_heap));
+	if (!heap)
+		return (NULL);
+	heap->arr = malloc(sizeof(t_heap_entry) * capacity);
+	if (!heap->arr)
+		return (NULL);
+	heap->capacity = capacity;
+	heap->size = 0;
+	if (pthread_mutex_init(&heap->lock, NULL))
+		return (free_dongles(dongles, size));
+	return (heap);
+}
+
+t_dongle	*init_dongle(size_t capacity)
+{
+	size_t		i;
+	t_dongle	*dongles;
+
+	i = 0;
+	dongles = malloc(capacity * sizeof(t_dongle));
+	if (!dongles)
+		return (NULL);
+	while (i < capacity)
+	{
+		if (pthread_mutex_init(&dongles[i].lock, NULL)
+			|| pthread_cond_init(&dongles[i].cond, NULL))
+			return (free_dongles(dongles, i));
+		dongles[i].dongle_id = i;
+		dongles[i].status = 0;
+		dongles[i].last_compile_time = 0;
+		dongles[i].request = init_heap(dongles, capacity, i);
+		if (!dongles[i].request)
+			return (free_dongles(dongles, i));
+		i++;
+	}
+	return (dongles);
+}
+
+static void	init_coder_entry(t_coder *coders, t_dongle *dongles, size_t i,
+		t_input *inputs)
+{
+	coders[i].last_compile_time = time_in_ms() - inputs->time_to_compile;
+	coders[i].id = i;
+	coders[i].inputs = inputs;
+	coders[i].counter = 0;
+	coders[i].right_dongle = &dongles[i];
+	if (inputs->number_of_coders == 1)
+		coders[i].left_dongle = NULL;
+	else if (i == inputs->number_of_coders - 1)
+		coders[i].left_dongle = &dongles[0];
+	else
+		coders[i].left_dongle = &dongles[i + 1];
+}
+
+t_coder	*init_coders(t_dongle *dongles, size_t capacity, pthread_mutex_t *lock,
+		t_input *inputs)
+{
+	size_t	i;
+	t_coder	*coders;
+
+	if (!dongles)
+		return (NULL);
+	if (pthread_mutex_init(lock, NULL))
+		return (free_dongles(dongles, capacity));
+	i = 0;
+	coders = malloc(capacity * sizeof(t_coder));
+	if (!coders)
+	{
+		pthread_mutex_destroy(lock);
+		return (free_dongles(dongles, capacity));
+	}
+	while (i < capacity)
+	{
+		if (pthread_mutex_init(&coders[i].state_lock, NULL))
+			return (free_coders(coders, dongles, capacity));
+		init_coder_entry(coders, dongles, i, inputs);
+		coders[i].print_lock = lock;
+		i++;
+	}
+	return (coders);
+}
+
+t_monitor	*init_monitor(t_coder *coders, t_dongle *dongles)
+{
+	t_monitor	*monitor;
+
+	if (!coders || !dongles)
+		return (NULL);
+	monitor = malloc(sizeof(t_monitor));
+	if (!monitor)
+		return (free_coders(coders, dongles, coders->inputs->number_of_coders));
+	if (pthread_mutex_init(&monitor->monitor_lock, NULL))
+		return (free(monitor), free_coders(coders, dongles,
+				coders->inputs->number_of_coders));
+	monitor->finished_count = 0;
+	monitor->coders = coders;
+	monitor->dongles = dongles;
+	return (monitor);
+}
+
+==> main.c <==
+
+==> Makefile <==
+NAME=codexion
+CC=gcc
+FLAGS= -Wall -Wextra -Werror
+DEPS=codexion.h
+CFILES=codexion.c helper.c minheap_implementation.c monitor.c\
+		parsing.c process.c routine.c thread_coder.c dongle.c\
+		free_resources.c initialization.c
+OFILES=$(CFILES:.c=.o)
+
+AOUT ?= 4 35 10 10 10 3 5 fifo
+
+all: $(NAME)
+
+$(NAME): $(CFILES) $(DEPS)
+	$(CC) $(FLAGS) -g -lpthread $^ -o $@
+
+clean:
+	rm -f $(OFILES)
+
+fclean: clean
+	rm -f $(NAME)
+
+re: fclean $(NAME)
+
+run: 
+	./codexion $(AOUT)
+
+debug: $(CFILES) $(DEPS)
+	$(CC) -fsanitize=thread -g -fno-sanitize=thread $^ -o $(NAME)
+
+.PHONY: all clean fclean re
+==> minheap_implementation.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   minheap_implementation.c                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/31 01:37:38 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:56:38 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+static void	swap(t_heap_entry *a, t_heap_entry *b)
+{
+	t_heap_entry	temp;
+
+	temp = *a;
+	*a = *b;
+	*b = temp;
+}
+
+static void	heap_loop(t_heap *heap)
+{
+	size_t	i;
+	size_t	smallest;
+	size_t	l;
+	size_t	r;
+
+	i = 0;
+	while (1)
+	{
+		smallest = i;
+		l = 2 * i + 1;
+		r = 2 * i + 2;
+		if (l < (size_t)heap->size
+			&& heap->arr[l].priority < heap->arr[smallest].priority)
+			smallest = l;
+		if (r < (size_t)heap->size
+			&& heap->arr[r].priority < heap->arr[smallest].priority)
+			smallest = r;
+		if (smallest == i)
+			break ;
+		swap(&heap->arr[i], &heap->arr[smallest]);
+		i = smallest;
+	}
+}
+
+void	push_coder(size_t id, long priority, t_heap *heap)
+{
+	size_t	index;
+
+	index = heap->size;
+	heap->arr[index].id = id;
+	heap->arr[index].priority = priority;
+	heap->size++;
+	while (index > 0 && heap->arr[(index - 1)
+			/ 2].priority > heap->arr[index].priority)
+	{
+		swap(&heap->arr[index], &heap->arr[(index - 1) / 2]);
+		index = (index - 1) / 2;
+	}
+}
+
+size_t	pop_coder(t_heap *heap)
+{
+	size_t	id;
+
+	if (heap->size == 0)
+		return ((size_t)(-1));
+	id = heap->arr[0].id;
+	heap->size--;
+	if (heap->size == 0)
+		return (id);
+	heap->arr[0] = heap->arr[heap->size];
+	heap_loop(heap);
+	return (id);
+}
+
+==> monitor.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   monitor.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/27 01:39:49 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/04 17:56:25 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+static void	stop_simulation(t_input *inputs, t_dongle *dongles, size_t n)
+{
+	size_t	i;
+
+	pthread_mutex_lock(&inputs->stop_lock);
+	inputs->stop = 1;
+	pthread_mutex_unlock(&inputs->stop_lock);
+	i = 0;
+	while (i < n)
+	{
+		pthread_mutex_lock(&dongles[i].lock);
+		pthread_cond_broadcast(&dongles[i].cond);
+		pthread_mutex_unlock(&dongles[i].lock);
+		i++;
+	}
+}
+
+static int	check_burnout(t_monitor *monitor, size_t i)
+{
+	long long	time_since_compile;
+	int			counter;
+	t_coder		*coders;
+
+	coders = monitor->coders;
+	pthread_mutex_lock(&coders[i].state_lock);
+	time_since_compile = time_in_ms() - coders[i].last_compile_time;
+	counter = coders[i].counter;
+	pthread_mutex_unlock(&coders[i].state_lock);
+	if (time_since_compile >= coders[i].inputs->time_to_burnout
+		&& counter != (int)coders[i].inputs->number_of_compiles_required)
+	{
+		stop_simulation(coders[i].inputs, monitor->dongles,
+			coders[i].inputs->number_of_coders);
+		ft_print("burned out", &coders[i], 1);
+		return (1);
+	}
+	return (0);
+}
+
+void	*monitor_routine(void *arg)
+{
+	t_monitor	*monitor;
+	size_t		i;
+	int			finished_count;
+
+	monitor = (t_monitor *)arg;
+	while (1)
+	{
+		pthread_mutex_lock(&monitor->monitor_lock);
+		finished_count = monitor->finished_count;
+		pthread_mutex_unlock(&monitor->monitor_lock);
+		if (finished_count == (int)monitor->coders[0].inputs->number_of_coders)
+			return (NULL);
+		i = 0;
+		while (i < monitor->coders[0].inputs->number_of_coders)
+		{
+			if (check_burnout(monitor, i))
+				return (NULL);
+			i++;
+		}
+		usleep(1000);
+	}
+	return (NULL);
+}
+
+==> parsing.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   parsing.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/04/21 13:47:50 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:57:32 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+static long	ft_atol(char *str)
+{
+	size_t	i;
+	long	nbr;
+
+	i = 0;
+	nbr = 0;
+	while (str[i] == 32 || (str[i] >= 9 && str[i] <= 13))
+		i++;
+	if (str[i] == '+')
+		i++;
+	while (str[i])
+	{
+		if (str[i] >= '0' && str[i] <= '9')
+			nbr = nbr * 10 + (str[i] - '0');
+		else
+			return (2147483649);
+		if (nbr > 2147483647)
+			return (2147483649);
+		i++;
+	}
+	return (nbr);
+}
+
+static int	convert_string(char *ac[], t_input *inputs)
+{
+	inputs->number_of_coders = ft_atol(ac[1]);
+	if (inputs->number_of_coders == 0 || inputs->number_of_coders == 2147483649
+		|| inputs->number_of_coders > MAX_CODERS)
+		return (0);
+	inputs->time_to_burnout = ft_atol(ac[2]);
+	if (inputs->time_to_burnout == 2147483649)
+		return (0);
+	inputs->time_to_compile = ft_atol(ac[3]);
+	if (inputs->time_to_compile == 2147483649)
+		return (0);
+	inputs->time_to_debug = ft_atol(ac[4]);
+	if (inputs->time_to_debug == 2147483649)
+		return (0);
+	inputs->time_to_refactor = ft_atol(ac[5]);
+	if (inputs->time_to_refactor == 2147483649)
+		return (0);
+	inputs->number_of_compiles_required = ft_atol(ac[6]);
+	if (inputs->number_of_compiles_required == 2147483649)
+		return (0);
+	inputs->dongle_cooldown = ft_atol(ac[7]);
+	if (inputs->dongle_cooldown == 2147483649)
+		return (0);
+	inputs->scheduler = ac[8];
+	return (1);
+}
+
+t_input	*parsing(int ac, char *av[])
+{
+	t_input	*inputs;
+
+	inputs = malloc(sizeof(t_input));
+	if (!inputs)
+		return (NULL);
+	if (ac != 9 || !convert_string(av, inputs) || (strcmp(av[8],
+				"edf") & strcmp(av[8], "fifo")))
+	{
+		fprintf(stderr,
+			"==================== INVALID INPUT ====================\n"
+			"\nYour program must take the following arguments:\n"
+			"- number_of_coders time_to_burnout time_to_compile\n"
+			"  time_to_debug time_to_refactor\n"
+			"  number_of_compiles_required dongle_cooldown scheduler\n"
+			"\nAll numeric inputs must be positive and < 2147483648\n"
+			"number_of_coders must be > 0 and <= MAX_CODERS\n"
+			"scheduler must be either 'edf' or 'fifo'\n");
+		free(inputs);
+		return (NULL);
+	}
+	if (pthread_mutex_init(&inputs->stop_lock, NULL))
+		return (free(inputs), NULL);
+	inputs->stop = 0;
+	return (inputs);
+}
+
+==> process.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   process.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/31 01:44:54 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 10:18:38 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+void	lock_unlock_last_compile_time(t_coder *coder, t_dongle *dongle)
+{
+	if (coder)
+	{
+		pthread_mutex_lock(&coder->state_lock);
+		coder->last_compile_time = time_in_ms();
+		pthread_mutex_unlock(&coder->state_lock);
+	}
+	else
+	{
+		pthread_mutex_lock(&dongle->lock);
+		dongle->last_compile_time = time_in_ms();
+		pthread_mutex_unlock(&dongle->lock);
+	}
+}
+
+void	compiling(t_coder *coder)
+{
+	ft_print("is compiling", coder, 0);
+	pthread_mutex_lock(&coder->state_lock);
+	coder->counter++;
+	pthread_mutex_unlock(&coder->state_lock);
+	lock_unlock_last_compile_time(coder, NULL);
+	timed_sleep(coder, coder->inputs->time_to_compile);
+	lock_unlock_last_compile_time(NULL, coder->left_dongle);
+	lock_unlock_last_compile_time(NULL, coder->right_dongle);
+}
+
+void	debugging(t_coder *coder)
+{
+	ft_print("is debugging", coder, 0);
+	timed_sleep(coder, coder->inputs->time_to_debug);
+}
+
+void	refactoring(t_coder *coder)
+{
+	ft_print("is refactoring", coder, 0);
+	timed_sleep(coder, coder->inputs->time_to_refactor);
+}
+
+==> routine.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   routine.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:19:45 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+static t_dongle	*get_smallest(t_coder *coder)
+{
+	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
+		return (coder->left_dongle);
+	return (coder->right_dongle);
+}
+
+static void	set_priority(t_coder *coder, t_dongle *dongle)
+{
+	pthread_mutex_lock(&dongle->lock);
+	pthread_mutex_lock(&coder->state_lock);
+	if (!strcmp(coder->inputs->scheduler, "fifo"))
+		coder->priority = time_in_ms();
+	else
+		coder->priority = coder->last_compile_time
+			+ coder->inputs->time_to_burnout;
+	pthread_mutex_unlock(&coder->state_lock);
+	pthread_mutex_unlock(&dongle->lock);
+}
+
+void	*request_dongle(t_coder *coder, t_dongle *dongle)
+{
+	t_dongle	*smallest;
+	long		prio;
+
+	smallest = get_smallest(coder);
+	if (dongle != smallest)
+	{
+		pthread_mutex_lock(&smallest->lock);
+		while (!is_stopped(coder->inputs) && smallest->request->size > 0
+			&& smallest->request->arr[0].id != coder->id)
+			pthread_cond_wait(&smallest->cond, &smallest->lock);
+		pthread_mutex_unlock(&smallest->lock);
+	}
+	set_priority(coder, dongle);
+	pthread_mutex_lock(&coder->state_lock);
+	prio = coder->priority;
+	pthread_mutex_unlock(&coder->state_lock);
+	pthread_mutex_lock(&dongle->request->lock);
+	push_coder(coder->id, prio, dongle->request);
+	pthread_mutex_unlock(&dongle->request->lock);
+	return (NULL);
+}
+
+void	check_dongles(t_coder *coder)
+{
+	if (coder->right_dongle->dongle_id < coder->left_dongle->dongle_id)
+	{
+		request_dongle(coder, coder->right_dongle);
+		request_dongle(coder, coder->left_dongle);
+	}
+	else
+	{
+		request_dongle(coder, coder->left_dongle);
+		request_dongle(coder, coder->right_dongle);
+	}
+}
+
+static void	run_cycle(t_coder *coder)
+{
+	compiling(coder);
+	if (is_stopped(coder->inputs))
+	{
+		release_dongle(coder);
+		return ;
+	}
+	release_dongle(coder);
+	debugging(coder);
+	refactoring(coder);
+}
+
+static void	*compile_loop(t_coder *coder)
+{
+	int	counter;
+
+	pthread_mutex_lock(&coder->state_lock);
+	counter = coder->counter;
+	pthread_mutex_unlock(&coder->state_lock);
+	while (counter < coder->inputs->number_of_compiles_required
+		&& !is_stopped(coder->inputs))
+	{
+		check_dongles(coder);
+		if (!take_both_dongles(coder))
+			return (NULL);
+		if (is_stopped(coder->inputs))
+			return (NULL);
+		run_cycle(coder);
+		pthread_mutex_lock(&coder->state_lock);
+		counter = coder->counter;
+		pthread_mutex_unlock(&coder->state_lock);
+	}
+	pthread_mutex_lock(&coder->inputs->monitor->monitor_lock);
+	coder->inputs->monitor->finished_count++;
+	pthread_mutex_unlock(&coder->inputs->monitor->monitor_lock);
+	return (NULL);
+}
+
+void	*routine(void *arg)
+{
+	t_coder	*coder;
+
+	coder = (t_coder *)arg;
+	lock_unlock_last_compile_time(coder, NULL);
+	if (coder->left_dongle == NULL)
+	{
+		pthread_mutex_lock(&coder->right_dongle->lock);
+		ft_print("has taken a dongle", coder, 0);
+		while (!is_stopped(coder->inputs))
+			usleep(1000);
+		pthread_mutex_unlock(&coder->right_dongle->lock);
+		return (NULL);
+	}
+	return (compile_loop(coder));
+}
+
+==> thread_coder.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   thread_coder.c                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/12 11:54:13 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 10:26:40 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
+
+void	create_threads(t_coder *coders, size_t capacity, t_monitor *monitor)
+{
+	size_t	i;
+
+	if (!coders || !monitor)
+		return ;
+	i = 0;
+	coders->inputs->start = time_in_ms();
+	pthread_create(&monitor->monitor_id, NULL, monitor_routine, monitor);
+	while (i < capacity)
+	{
+		pthread_create(&coders[i].coder_id, NULL, routine, &coders[i]);
+		i++;
+	}
+	i = 0;
+	while (i < capacity)
+	{
+		pthread_join(coders[i].coder_id, NULL);
+		i++;
+	}
+	pthread_join(monitor->monitor_id, NULL);
+	pthread_mutex_destroy(coders[0].print_lock);
+}

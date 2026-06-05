@@ -21,7 +21,7 @@ long long	time_in_ms(void)
 		fprintf(stderr, "gettimeofday failed");
 		return (-1);
 	}
-	return ((long long)tv.tv_sec * 1000) + ((long long)tv.tv_usec / 1000);
+	return (((long long)tv.tv_sec * 1000) + ((long long)tv.tv_usec / 1000));
 }
 
 void	timed_sleep(t_coder *coder, long long time)
@@ -30,10 +30,7 @@ void	timed_sleep(t_coder *coder, long long time)
 
 	start = time_in_ms();
 	while ((time_in_ms() - start) < time && !is_stopped(coder->inputs))
-	{
 		usleep(1000);
-		// burnout_check(coder);
-	}
 }
 
 void	ft_print(char *str, t_coder *coder, int force)
@@ -53,7 +50,7 @@ void	ft_print(char *str, t_coder *coder, int force)
 
 int	is_stopped(t_input *inputs)
 {
-	int value;
+	int	value;
 
 	pthread_mutex_lock(&inputs->stop_lock);
 	value = inputs->stop;

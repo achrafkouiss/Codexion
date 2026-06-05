@@ -30,7 +30,6 @@ void	lock_unlock_last_compile_time(t_coder *coder, t_dongle *dongle)
 
 void	compiling(t_coder *coder)
 {
-	// burnout_check(coder);
 	ft_print("is compiling", coder, 0);
 	pthread_mutex_lock(&coder->state_lock);
 	coder->counter++;
@@ -43,14 +42,12 @@ void	compiling(t_coder *coder)
 
 void	debugging(t_coder *coder)
 {
-	// burnout_check(coder);
 	ft_print("is debugging", coder, 0);
 	timed_sleep(coder, coder->inputs->time_to_debug);
 }
 
 void	refactoring(t_coder *coder)
 {
-	// burnout_check(coder);
 	ft_print("is refactoring", coder, 0);
 	timed_sleep(coder, coder->inputs->time_to_refactor);
 }

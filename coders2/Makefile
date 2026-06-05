@@ -3,7 +3,8 @@ CC=gcc
 FLAGS= -Wall -Wextra -Werror
 DEPS=codexion.h
 CFILES=codexion.c helper.c minheap_implementation.c monitor.c\
-		parsing.c process.c routine.c thread_coder.c
+		parsing.c process.c routine.c thread_coder.c dongle.c\
+		free_resources.c initialization.c request.c
 OFILES=$(CFILES:.c=.o)
 
 AOUT ?= 4 35 10 10 10 3 5 fifo

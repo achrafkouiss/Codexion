@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 22:12:24 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/05 10:20:01 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 void	*request_dongle(t_coder *coder, t_dongle *dongle)
 {
 	t_dongle	*smallest;
-	long prio;
+	long		prio;
 
 	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
 		smallest = coder->left_dongle;
@@ -39,14 +39,14 @@ void	*request_dongle(t_coder *coder, t_dongle *dongle)
 	else
 	{
 		pthread_mutex_lock(&coder->state_lock);
-		coder->priority = coder->last_compile_time + coder->inputs->time_to_burnout;
+		coder->priority = coder->last_compile_time
+			+ coder->inputs->time_to_burnout;
 		pthread_mutex_unlock(&coder->state_lock);
 	}
 	pthread_mutex_unlock(&dongle->lock);
 	pthread_mutex_lock(&coder->state_lock);
 	prio = coder->priority;
 	pthread_mutex_unlock(&coder->state_lock);
-
 	pthread_mutex_lock(&dongle->request->lock);
 	push_coder(coder->id, prio, dongle->request);
 	pthread_mutex_unlock(&dongle->request->lock);
@@ -119,8 +119,7 @@ int	take_both_dongles(t_coder *coder)
 		if (first->status == 0 && second->status == 0
 			&& first_ready <= time_in_ms() && second_ready <= time_in_ms()
 			&& first->request->arr[0].id == coder->id
-			&& second->request->arr[0].id == coder->id
-		)
+			&& second->request->arr[0].id == coder->id)
 		{
 			pop_coder(first->request);
 			pop_coder(second->request);
@@ -142,12 +141,10 @@ int	take_both_dongles(t_coder *coder)
 void	*routine(void *arg)
 {
 	t_coder	*coder;
-	int counter;
+	int		counter;
 
 	coder = (t_coder *)arg;
-	pthread_mutex_lock(&coder->state_lock);
-	coder->last_compile_time = time_in_ms();
-	pthread_mutex_unlock(&coder->state_lock);
+	lock_unlock_last_compile_time(coder, NULL);
 	if (coder->left_dongle == NULL)
 	{
 		pthread_mutex_lock(&coder->right_dongle->lock);
@@ -181,9 +178,7 @@ void	*routine(void *arg)
 		pthread_mutex_lock(&coder->state_lock);
 		counter = coder->counter;
 		pthread_mutex_unlock(&coder->state_lock);
-		
 	}
-	
 	pthread_mutex_lock(&coder->inputs->monitor->monitor_lock);
 	coder->inputs->monitor->finished_count++;
 	pthread_mutex_unlock(&coder->inputs->monitor->monitor_lock);

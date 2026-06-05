@@ -19,7 +19,6 @@ void	create_threads(t_coder *coders, size_t capacity, t_monitor *monitor)
 	if (!coders || !monitor)
 		return ;
 	i = 0;
-	// pthread_mutex_init(coders[0].print_lock, NULL);
 	coders->inputs->start = time_in_ms();
 	pthread_create(&monitor->monitor_id, NULL, monitor_routine, monitor);
 	while (i < capacity)

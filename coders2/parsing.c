@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:50 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 10:25:34 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/05 11:57:32 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,6 @@ static long	ft_atol(char *str)
 static int	convert_string(char *ac[], t_input *inputs)
 {
 	inputs->number_of_coders = ft_atol(ac[1]);
-	// make sure to add specify the error
 	if (inputs->number_of_coders == 0 || inputs->number_of_coders == 2147483649
 		|| inputs->number_of_coders > MAX_CODERS)
 		return (0);
@@ -76,13 +75,14 @@ t_input	*parsing(int ac, char *av[])
 				"edf") & strcmp(av[8], "fifo")))
 	{
 		fprintf(stderr,
-			"==================== INVALID INPUT ==============================\n\
-            \nYour program must take the following arguments (all mandatory):\
-            \n- number_of_coders time_to_burnout time_to_compile time_to_debug\
-            \n  time_to_refactor number_of_compiles_required dongle_cooldown scheduler\n\
-            \nthe fisrt seven inputs should all be positive and less then 2147483648\
-            \nfor the number_of_coders be more than 0\
-            \nfor the scheduler should be either edf or fifo");
+			"==================== INVALID INPUT ====================\n"
+			"\nYour program must take the following arguments:\n"
+			"- number_of_coders time_to_burnout time_to_compile\n"
+			"  time_to_debug time_to_refactor\n"
+			"  number_of_compiles_required dongle_cooldown scheduler\n"
+			"\nAll numeric inputs must be positive and < 2147483648\n"
+			"number_of_coders must be > 0 and <= MAX_CODERS\n"
+			"scheduler must be either 'edf' or 'fifo'\n");
 		free(inputs);
 		return (NULL);
 	}

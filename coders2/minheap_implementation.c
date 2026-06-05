@@ -1,25 +1,14 @@
-//
-	/* ************************************************************************** */
-//
-	/*                                                                            */
-//
-	/*                                                        :::      ::::::::   */
-//
-	/*   minheap_implementation.c                           :+:      :+:    :+:   */
-// /*                                                    +:+ +:+        
-	+:+     */
-// /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+      
-	+#+        */
-// /*                                                +#+#+#+#+#+  
-	+#+           */
-//
-	/*   Created: 2026/05/31 01:37:38 by akouiss           #+#    #+#             */
-//
-	/*   Updated: 2026/06/04 17:33:40 by akouiss          ###   ########.fr       */
-//
-	/*                                                                            */
-//
-	/* ************************************************************************** */
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   minheap_implementation.c                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/31 01:37:38 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 11:56:38 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "codexion.h"
 
@@ -67,7 +56,7 @@ void	push_coder(size_t id, long priority, t_heap *heap)
 	heap->arr[index].priority = priority;
 	heap->size++;
 	while (index > 0 && heap->arr[(index - 1)
-		/ 2].priority > heap->arr[index].priority)
+			/ 2].priority > heap->arr[index].priority)
 	{
 		swap(&heap->arr[index], &heap->arr[(index - 1) / 2]);
 		index = (index - 1) / 2;
@@ -76,9 +65,11 @@ void	push_coder(size_t id, long priority, t_heap *heap)
 
 size_t	pop_coder(t_heap *heap)
 {
+	size_t	id;
+
 	if (heap->size == 0)
-		return ((size_t)-1);
-	size_t id = heap->arr[0].id;
+		return ((size_t)(-1));
+	id = heap->arr[0].id;
 	heap->size--;
 	if (heap->size == 0)
 		return (id);
