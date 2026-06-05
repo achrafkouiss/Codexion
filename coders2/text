@@ -54,7 +54,7 @@ int	main(int ac, char *av[])
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 11:52:51 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/05 12:09:14 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,6 +143,11 @@ void					timed_sleep(t_coder *coder, long long time);
 void					ft_print(char *str, t_coder *coder, int force);
 int						is_stopped(t_input *inputs);
 
+// free_resources.c
+void					*free_dongles(t_dongle *dongles, size_t size);
+void					*free_coders(t_coder *coders, t_dongle *dongles,
+							size_t size);
+
 // minheap_implementation.c
 void					push_coder(size_t id, long priority, t_heap *heap);
 size_t					pop_coder(t_heap *heap);
@@ -155,37 +160,29 @@ void					debugging(t_coder *coder);
 void					refactoring(t_coder *coder);
 
 // dongle.c
+void					get_ordered_dongles(t_coder *coder,
+							t_dongle **first, t_dongle **second);
 int						take_both_dongles(t_coder *coder);
 void					release_dongle(t_coder *coder);
 
-// free_resources.c
-void					*free_dongles(t_dongle *dongles, size_t size);
-void					*free_coders(t_coder *coders, t_dongle *dongles,
-							size_t size);
+// request.c
+void					*request_dongle(t_coder *coder, t_dongle *dongle);
+void					check_dongles(t_coder *coder);
 
-// initialisation.c
+t_input					*parsing(int ac, char *av[]);
+void					*routine(void *arg);
+void					*monitor_routine(void *arg);
+void					create_threads(t_coder *coders, size_t capacity,
+							t_monitor *monitor);
+int						codexion(int ac, char *av[]);
+
+// initialization.c
+t_heap					*init_heap(t_dongle *dongles, size_t capacity,
+							size_t size);
 t_dongle				*init_dongle(size_t capacity);
 t_coder					*init_coders(t_dongle *dongles, size_t capacity,
 							pthread_mutex_t *lock, t_input *inputs);
 t_monitor				*init_monitor(t_coder *coders, t_dongle *dongles);
-t_heap					*init_heap(t_dongle *dongles, size_t capacity,
-							size_t size);
-
-// parsing.c
-t_input					*parsing(int ac, char *av[]);
-
-// routine.c
-void					*routine(void *arg);
-
-// monitore.c
-void					*monitor_routine(void *arg);
-
-// thread_coder.c
-void					create_threads(t_coder *coders, size_t capacity,
-							t_monitor *monitor);
-
-// codexion.c
-int						codexion(int ac, char *av[]);
 
 #endif
 
@@ -198,13 +195,13 @@ int						codexion(int ac, char *av[]);
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/06/05 11:10:11 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 11:18:52 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/05 12:11:26 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-static void	get_ordered_dongles(t_coder *coder, t_dongle **first,
+void	get_ordered_dongles(t_coder *coder, t_dongle **first,
 		t_dongle **second)
 {
 	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
@@ -226,8 +223,8 @@ static int	try_acquire(t_coder *coder, t_dongle *first, t_dongle *second)
 
 	first_ready = first->last_compile_time + coder->inputs->dongle_cooldown;
 	second_ready = second->last_compile_time + coder->inputs->dongle_cooldown;
-	if (first->status == 0 && second->status == 0 && first_ready <= time_in_ms()
-		&& second_ready <= time_in_ms()
+	if (first->status == 0 && second->status == 0
+		&& first_ready <= time_in_ms() && second_ready <= time_in_ms()
 		&& first->request->arr[0].id == coder->id
 		&& second->request->arr[0].id == coder->id)
 	{
@@ -528,7 +525,7 @@ FLAGS= -Wall -Wextra -Werror
 DEPS=codexion.h
 CFILES=codexion.c helper.c minheap_implementation.c monitor.c\
 		parsing.c process.c routine.c thread_coder.c dongle.c\
-		free_resources.c initialization.c
+		free_resources.c initialization.c request.c
 OFILES=$(CFILES:.c=.o)
 
 AOUT ?= 4 35 10 10 10 3 5 fifo
@@ -864,16 +861,16 @@ void	refactoring(t_coder *coder)
 	timed_sleep(coder, coder->inputs->time_to_refactor);
 }
 
-==> routine.c <==
+==> request.c <==
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   routine.c                                          :+:      :+:    :+:   */
+/*   request.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 11:19:45 by akouiss          ###   ########.fr       */
+/*   Created: 2026/06/05 11:10:11 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 12:08:23 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -936,6 +933,21 @@ void	check_dongles(t_coder *coder)
 		request_dongle(coder, coder->right_dongle);
 	}
 }
+
+==> routine.c <==
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   routine.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
+/*   Updated: 2026/06/05 12:11:22 by akouiss          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "codexion.h"
 
 static void	run_cycle(t_coder *coder)
 {
