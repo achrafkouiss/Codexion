@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/27 01:39:49 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/04 17:56:25 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 06:05:48 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ static void	stop_simulation(t_input *inputs, t_dongle *dongles, size_t n)
 static int	check_burnout(t_monitor *monitor, size_t i)
 {
 	long long	time_since_compile;
-	int			counter;
+	long			counter;
 	t_coder		*coders;
 
 	coders = monitor->coders;

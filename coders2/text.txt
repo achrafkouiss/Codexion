@@ -195,7 +195,7 @@ t_monitor				*init_monitor(t_coder *coders, t_dongle *dongles);
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/06/05 11:10:11 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:11:26 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 02:37:41 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -220,11 +220,17 @@ static int	try_acquire(t_coder *coder, t_dongle *first, t_dongle *second)
 {
 	long long	first_ready;
 	long long	second_ready;
+	int			acquired;
 
+	acquired = 0;
 	first_ready = first->last_compile_time + coder->inputs->dongle_cooldown;
 	second_ready = second->last_compile_time + coder->inputs->dongle_cooldown;
+	pthread_mutex_lock(&first->request->lock);
+	pthread_mutex_lock(&second->request->lock);
 	if (first->status == 0 && second->status == 0
 		&& first_ready <= time_in_ms() && second_ready <= time_in_ms()
+		&& first->request->size > 0
+		&& second->request->size > 0
 		&& first->request->arr[0].id == coder->id
 		&& second->request->arr[0].id == coder->id)
 	{
@@ -232,9 +238,11 @@ static int	try_acquire(t_coder *coder, t_dongle *first, t_dongle *second)
 		pop_coder(second->request);
 		first->status = 1;
 		second->status = 1;
-		return (1);
+		acquired = 1;
 	}
-	return (0);
+	pthread_mutex_unlock(&second->request->lock);
+	pthread_mutex_unlock(&first->request->lock);
+	return (acquired);
 }
 
 static int	poll_dongles(t_coder *coder, t_dongle *first, t_dongle *second)
@@ -292,7 +300,7 @@ void	release_dongle(t_coder *coder)
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/06/05 11:11:23 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 11:13:15 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 02:32:12 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -307,12 +315,14 @@ void	*free_dongles(t_dongle *dongles, size_t size)
 	i = 0;
 	while (i < size)
 	{
-		if (dongles[i].request)
-			free(dongles[i].request->arr);
 		pthread_mutex_destroy(&dongles[i].lock);
-		pthread_mutex_destroy(&dongles[i].request->lock);
 		pthread_cond_destroy(&dongles[i].cond);
-		free(dongles[i].request);
+		if (dongles[i].request)
+		{
+			free(dongles[i].request->arr);
+			pthread_mutex_destroy(&dongles[i].request->lock);
+			free(dongles[i].request);
+		}
 		i++;
 	}
 	free(dongles);
@@ -406,7 +416,7 @@ int	is_stopped(t_input *inputs)
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:03:20 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 02:36:18 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -425,7 +435,11 @@ t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
 	heap->capacity = capacity;
 	heap->size = 0;
 	if (pthread_mutex_init(&heap->lock, NULL))
+	{
+		free(heap->arr);
+		free(heap);
 		return (free_dongles(dongles, size));
+	}
 	return (heap);
 }
 
@@ -720,7 +734,7 @@ void	*monitor_routine(void *arg)
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:50 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 11:57:32 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/05                                   ###   ########.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -750,62 +764,76 @@ static long	ft_atol(char *str)
 	return (nbr);
 }
 
-static int	convert_string(char *ac[], t_input *inputs)
+static int	print_arg_error(int idx, char *arg, char *msg)
 {
-	inputs->number_of_coders = ft_atol(ac[1]);
-	if (inputs->number_of_coders == 0 || inputs->number_of_coders == 2147483649
-		|| inputs->number_of_coders > MAX_CODERS)
-		return (0);
-	inputs->time_to_burnout = ft_atol(ac[2]);
-	if (inputs->time_to_burnout == 2147483649)
-		return (0);
-	inputs->time_to_compile = ft_atol(ac[3]);
-	if (inputs->time_to_compile == 2147483649)
-		return (0);
-	inputs->time_to_debug = ft_atol(ac[4]);
-	if (inputs->time_to_debug == 2147483649)
-		return (0);
-	inputs->time_to_refactor = ft_atol(ac[5]);
-	if (inputs->time_to_refactor == 2147483649)
-		return (0);
-	inputs->number_of_compiles_required = ft_atol(ac[6]);
-	if (inputs->number_of_compiles_required == 2147483649)
-		return (0);
-	inputs->dongle_cooldown = ft_atol(ac[7]);
-	if (inputs->dongle_cooldown == 2147483649)
-		return (0);
-	inputs->scheduler = ac[8];
+	fprintf(stderr, "Error: arg %d %s -> %s\n", idx, msg, arg);
+	return (0);
+}
+
+static int	convert_string(char *ac[], t_input *in)
+{
+	in->number_of_coders = ft_atol(ac[1]);
+	if (in->number_of_coders == 2147483649)
+		return (print_arg_error(1, ac[1], "invalid number"));
+	if (in->number_of_coders == 0
+		|| in->number_of_coders > MAX_CODERS)
+		return (print_arg_error(1, ac[1], "out of range"));
+	in->time_to_burnout = ft_atol(ac[2]);
+	if (in->time_to_burnout == 2147483649)
+		return (print_arg_error(2, ac[2], "invalid number"));
+	in->time_to_compile = ft_atol(ac[3]);
+	if (in->time_to_compile == 2147483649)
+		return (print_arg_error(3, ac[3], "invalid number"));
+	in->time_to_debug = ft_atol(ac[4]);
+	if (in->time_to_debug == 2147483649)
+		return (print_arg_error(4, ac[4], "invalid number"));
+	in->time_to_refactor = ft_atol(ac[5]);
+	if (in->time_to_refactor == 2147483649)
+		return (print_arg_error(5, ac[5], "invalid number"));
+	in->number_of_compiles_required = ft_atol(ac[6]);
+	if (in->number_of_compiles_required == 2147483649)
+		return (print_arg_error(6, ac[6], "invalid number"));
+	in->dongle_cooldown = ft_atol(ac[7]);
+	if (in->dongle_cooldown == 2147483649)
+		return (print_arg_error(7, ac[7], "invalid number"));
 	return (1);
+}
+
+static void	print_usage(void)
+{
+	fprintf(stderr, "\n==================== INVALID INPUT ====================\n\n");
+	fprintf(stderr, "Usage:\n");
+	fprintf(stderr, "./codexion <number_of_coders> <time_to_burnout> <time_to_compile>\n");
+	fprintf(stderr, "           <time_to_debug> <time_to_refactor> <number_of_compiles>\n");
+	fprintf(stderr, "           <dongle_cooldown> <scheduler>\n\n");
+	fprintf(stderr, "Constraints:\n");
+	fprintf(stderr, "number_of_coders > 0 and <= %d\n", MAX_CODERS);
+	fprintf(stderr, "time values >= 0 and < 2147483648\n");
+	fprintf(stderr, "scheduler: fifo or edf\n");
 }
 
 t_input	*parsing(int ac, char *av[])
 {
-	t_input	*inputs;
+	t_input	*in;
 
-	inputs = malloc(sizeof(t_input));
-	if (!inputs)
+	if (ac != 9)
+		return (print_usage(), NULL);
+	in = malloc(sizeof(t_input));
+	if (!in)
 		return (NULL);
-	if (ac != 9 || !convert_string(av, inputs) || (strcmp(av[8],
-				"edf") & strcmp(av[8], "fifo")))
+	if (!convert_string(av, in))
+		return (free(in), NULL);
+	if (strcmp(av[8], "edf") && strcmp(av[8], "fifo"))
 	{
-		fprintf(stderr,
-			"==================== INVALID INPUT ====================\n"
-			"\nYour program must take the following arguments:\n"
-			"- number_of_coders time_to_burnout time_to_compile\n"
-			"  time_to_debug time_to_refactor\n"
-			"  number_of_compiles_required dongle_cooldown scheduler\n"
-			"\nAll numeric inputs must be positive and < 2147483648\n"
-			"number_of_coders must be > 0 and <= MAX_CODERS\n"
-			"scheduler must be either 'edf' or 'fifo'\n");
-		free(inputs);
-		return (NULL);
+		fprintf(stderr, "Error: arg 8 invalid scheduler -> %s\n", av[8]);
+		return (free(in), NULL);
 	}
-	if (pthread_mutex_init(&inputs->stop_lock, NULL))
-		return (free(inputs), NULL);
-	inputs->stop = 0;
-	return (inputs);
+	in->scheduler = av[8];
+	if (pthread_mutex_init(&in->stop_lock, NULL))
+		return (free(in), NULL);
+	in->stop = 0;
+	return (in);
 }
-
 ==> process.c <==
 /* ************************************************************************** */
 /*                                                                            */
@@ -943,7 +971,7 @@ void	check_dongles(t_coder *coder)
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:11:22 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 05:16:40 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -994,7 +1022,7 @@ void	*routine(void *arg)
 
 	coder = (t_coder *)arg;
 	lock_unlock_last_compile_time(coder, NULL);
-	if (coder->left_dongle == NULL)
+	if (coder->left_dongle == NULL && coder->inputs->number_of_compiles_required != 0)
 	{
 		pthread_mutex_lock(&coder->right_dongle->lock);
 		ft_print("has taken a dongle", coder, 0);

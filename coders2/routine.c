@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/11 16:06:54 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:11:22 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 06:05:52 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ static void	run_cycle(t_coder *coder)
 
 static void	*compile_loop(t_coder *coder)
 {
-	int	counter;
+	long	counter;
 
 	pthread_mutex_lock(&coder->state_lock);
 	counter = coder->counter;
@@ -57,7 +57,7 @@ void	*routine(void *arg)
 
 	coder = (t_coder *)arg;
 	lock_unlock_last_compile_time(coder, NULL);
-	if (coder->left_dongle == NULL)
+	if (coder->left_dongle == NULL && coder->inputs->number_of_compiles_required != 0)
 	{
 		pthread_mutex_lock(&coder->right_dongle->lock);
 		ft_print("has taken a dongle", coder, 0);

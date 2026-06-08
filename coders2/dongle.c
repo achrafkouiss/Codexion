@@ -6,13 +6,13 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/06/05 11:10:11 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:11:26 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 06:59:52 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "codexion.h"
 
-void	get_ordered_dongles(t_coder *coder, t_dongle **first,
+static void	get_ordered_dongles(t_coder *coder, t_dongle **first,
 		t_dongle **second)
 {
 	if (coder->left_dongle->dongle_id < coder->right_dongle->dongle_id)
@@ -31,11 +31,17 @@ static int	try_acquire(t_coder *coder, t_dongle *first, t_dongle *second)
 {
 	long long	first_ready;
 	long long	second_ready;
+	int			acquired;
 
+	acquired = 0;
 	first_ready = first->last_compile_time + coder->inputs->dongle_cooldown;
 	second_ready = second->last_compile_time + coder->inputs->dongle_cooldown;
+	pthread_mutex_lock(&first->request->lock);
+	pthread_mutex_lock(&second->request->lock);
 	if (first->status == 0 && second->status == 0
 		&& first_ready <= time_in_ms() && second_ready <= time_in_ms()
+		&& first->request->size > 0
+		&& second->request->size > 0
 		&& first->request->arr[0].id == coder->id
 		&& second->request->arr[0].id == coder->id)
 	{
@@ -43,9 +49,11 @@ static int	try_acquire(t_coder *coder, t_dongle *first, t_dongle *second)
 		pop_coder(second->request);
 		first->status = 1;
 		second->status = 1;
-		return (1);
+		acquired = 1;
 	}
-	return (0);
+	pthread_mutex_unlock(&second->request->lock);
+	pthread_mutex_unlock(&first->request->lock);
+	return (acquired);
 }
 
 static int	poll_dongles(t_coder *coder, t_dongle *first, t_dongle *second)

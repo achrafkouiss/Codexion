@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:44 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:03:20 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 02:36:18 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,11 @@ t_heap	*init_heap(t_dongle *dongles, size_t capacity, size_t size)
 	heap->capacity = capacity;
 	heap->size = 0;
 	if (pthread_mutex_init(&heap->lock, NULL))
+	{
+		free(heap->arr);
+		free(heap);
 		return (free_dongles(dongles, size));
+	}
 	return (heap);
 }
 

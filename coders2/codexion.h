@@ -6,7 +6,7 @@
 /*   By: akouiss <akouiss@student.1337.ma>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/21 13:47:56 by akouiss           #+#    #+#             */
-/*   Updated: 2026/06/05 12:09:14 by akouiss          ###   ########.fr       */
+/*   Updated: 2026/06/07 06:05:42 by akouiss          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ typedef struct s_coder
 	size_t				id;
 	long long			last_compile_time;
 	long long			priority;
-	int					counter;
+	long					counter;
 	t_dongle			*left_dongle;
 	t_dongle			*right_dongle;
 	pthread_mutex_t		*print_lock;
